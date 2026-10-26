@@ -4,6 +4,7 @@
 import { readCalendar, calendarEnabled } from "./calendar.js";
 import { calendarSetupPanel } from "./calendar-setup.js";
 import { MIC_STEPS, micPlatform, micForgets } from "./mic.js";
+import { calEdit, removeCalEdit } from "./calendar-edit.js";
 
 const get = (k, d = null) => { try { return JSON.parse(localStorage.getItem("jarvis." + k)) ?? d; } catch { return d; } };
 const set = (k, v) => localStorage.setItem("jarvis." + k, JSON.stringify(v));
@@ -32,8 +33,8 @@ function updateSettings(patch, toast, msg) {
 }
 
 // I passaggi per rendere permanente il permesso, su questo dispositivo, aperti sotto la voce.
-function toggleMicSteps(btn) {
-  const box = btn.parentElement, open = box.querySelector(".mic-steps");
+function toggleMicSteps(row) {
+  const box = row.querySelector("div"), open = box.querySelector(".mic-steps");
   if (open) { open.remove(); return; }
   box.append(el(`<ol class="mic-steps small muted" style="margin:8px 0 0;padding-left:18px;display:grid;gap:4px">${MIC_STEPS[micPlatform()].map((s) => `<li>${s}</li>`).join("")}</ol>`));
 }
@@ -51,7 +52,7 @@ async function items(toast) {
       : forgets ? "Il browser lo dimentica e te lo richiede a ogni avvio. Memoria da pesce rosso: si cura in un minuto."
       : "Te lo chiederà alla prima conversazione a voce.",
     action: mic === "unknown" ? null
-      : { label: mic === "granted" ? "Come cambiarlo" : mic === "denied" ? "Come sbloccarlo" : "Non chiedermelo più", run: (e) => toggleMicSteps(e.currentTarget) },
+      : { label: mic === "granted" ? "Come cambiarlo" : mic === "denied" ? "Come sbloccarlo" : "Non chiedermelo più", run: (row) => toggleMicSteps(row) },
   });
 
   list.push({
@@ -83,6 +84,18 @@ async function items(toast) {
         panel.dataset.setup = "1";
         row.querySelector("div").append(panel);
       } },
+  });
+
+  const edit = calEdit();
+  list.push({
+    id: "calendar-edit", title: "Modifica del calendario", active: !!edit?.url,
+    detail: edit?.url ? `Jarvis può creare, spostare e cancellare eventi di "${esc(edit.name || "Google Calendar")}", sempre dopo un tuo tocco.`
+      : "Non collegata: Jarvis legge l'agenda ma non la modifica. Si collega da «Fammi modificare il calendario», qui nelle impostazioni.",
+    action: edit?.url ? { label: "Revoca", danger: true, run: () => {
+      removeCalEdit();
+      toast?.("Scollegato. Per spegnerlo del tutto: script.google.com → progetto Jarvis → Esegui il deployment → Gestisci deployment → Archivia.", 8000);
+      setTimeout(() => location.reload(), 1500);
+    } } : null,
   });
 
   const elevenOn = settings.engine !== "gemini" && settings.engine !== "browser";

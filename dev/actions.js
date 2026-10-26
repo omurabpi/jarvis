@@ -2,6 +2,8 @@
 // [[AZIONE: TIPO | campo | campo ...]]; l'app le trasforma in pulsanti che aprono
 // l'app giusta con i dati già compilati. L'invio resta sempre all'utente.
 
+import { calEditOn, calCall, findEvent, whenText, isDone, markDone, refreshLive } from "./calendar-edit.js";
+
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const enc = encodeURIComponent;
 const phone = (s = "") => s.replace(/[^\d+]/g, "");
@@ -23,11 +25,14 @@ function resolve(s = "") {
 
 export const ACTIONS_PROMPT = `Azioni sul telefono — quando è utile, proponi a fine risposta uno o più pulsanti con righe esattamente in questi formati (i campi tra parentesi quadre sono facoltativi, lasciali vuoti se non li conosci):
 [[AZIONE: EVENTO | titolo | AAAA-MM-GG HH:MM | durata in minuti | [luogo]]]
+[[AZIONE: SPOSTA | codice evento | nuovo inizio AAAA-MM-GG HH:MM | [durata in minuti] | [nuovo titolo]]]
+[[AZIONE: CANCELLA | codice evento]]
 [[AZIONE: WHATSAPP | testo del messaggio | [numero con prefisso, oppure nome in rubrica]]]
 [[AZIONE: EMAIL | [destinatario] | oggetto | testo]]
 [[AZIONE: CHIAMA | numero oppure nome in rubrica]]
 [[AZIONE: SMS | [numero oppure nome in rubrica] | testo]]
 [[AZIONE: MAPPA | luogo o indirizzo]]
+SPOSTA e CANCELLA funzionano solo se nell'agenda del contesto gli eventi hanno un codice tra parentesi quadre (es. [c4k2]): usa quel codice, senza parentesi. Se i codici non ci sono, il calendario è in sola lettura: dillo, e per un evento nuovo usa EVENTO. Il pulsante esegue la modifica solo quando l'utente lo tocca: non dire che l'hai già fatta.
 Usale per appuntamenti, messaggi e email che hai scritto, numeri e luoghi citati. Se il destinatario è in rubrica scrivi il suo nome al posto del numero: l'app lo trova da sola. Non inventare numeri o indirizzi email: se non li conosci lascia il campo vuoto.`;
 
 // Estrae le azioni dal testo. Restituisce il testo pulito e l'elenco delle azioni valide.
@@ -45,6 +50,8 @@ export function parseActions(text) {
 // Stessa azione richiesta con argomenti con nome (strumenti della conversazione vocale).
 const FIELDS = {
   EVENTO: ["titolo", "quando", "durata", "luogo"],
+  SPOSTA: ["evento", "quando", "durata", "titolo"],
+  CANCELLA: ["evento"],
   WHATSAPP: ["testo", "numero"],
   EMAIL: ["destinatario", "oggetto", "testo"],
   CHIAMA: ["numero"],
@@ -63,6 +70,21 @@ function build(type, f) {
       const m = (when || "").match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
       if (!title || !m) return null;
       return { kind: "event", label: "Aggiungi al calendario", title, date: m.slice(1, 4).join("-"), time: m[4] ? `${m[4]}:${m[5]}` : null, minutes: parseInt(minutes) || 60, place: place || "" };
+    }
+    // Il pulsante si porta dietro tutto ciò che serve: in cronologia funziona anche dopo che l'agenda è cambiata.
+    case "SPOSTA": {
+      const [ref, when, minutes, title] = f;
+      const ev = findEvent(ref);
+      const m = (when || "").match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+      if (!ev || ev.recurring || !m) return null; // una serie ricorrente non si tocca da qui: rischio di cambiarla tutta
+      const old = ev.allDay ? 0 : (new Date(ev.end) - new Date(ev.start)) / 60000;
+      return { kind: "cal-move", id: ev.id, at: ev.start, oldTitle: ev.title, oldWhen: whenText(ev), recurring: !!ev.recurring, title: title || "",
+        date: m.slice(1, 4).join("-"), time: m[4] ? `${m[4]}:${m[5]}` : null, minutes: parseInt(minutes) || old || 60 };
+    }
+    case "CANCELLA": {
+      const ev = findEvent(f[0]);
+      if (!ev || ev.recurring) return null;
+      return { kind: "cal-delete", id: ev.id, at: ev.start, oldTitle: ev.title, oldWhen: whenText(ev), recurring: !!ev.recurring };
     }
     case "WHATSAPP": {
       const [body, to] = f;
@@ -127,9 +149,53 @@ function eventHref(a) {
   return { href: `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${enc(a.title)}&dates=${dates}&ctz=${enc(tz)}&location=${enc(a.place)}` };
 }
 
+// Calendario collegato: inizio e fine da mandare (ISO per gli orari, date semplici per i giorni interi).
+function span(date, time, minutes) {
+  if (!time) { const d = new Date(`${date}T12:00:00`); d.setDate(d.getDate() + 1); return { allDay: true, start: date, end: d.toLocaleDateString("sv-SE") }; }
+  const s = new Date(`${date}T${time}:00`);
+  return { allDay: false, start: s.toISOString(), end: new Date(s.getTime() + minutes * 60000).toISOString() };
+}
+const nice = (date, time) => new Date(`${date}T${time || "12:00"}:00`).toLocaleString("it-IT", { weekday: "short", day: "numeric", month: "short", ...(time ? { hour: "2-digit", minute: "2-digit" } : {}) });
+
+// Pulsante che modifica davvero il calendario: parte solo al tocco, e un secondo tocco non lo ripete.
+function calButton(a, label, done, run, warn) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "action" + (warn ? " warn" : "");
+  const sig = JSON.stringify([a.kind, a.id || a.title, a.at || "", a.date || "", a.time || ""]);
+  if (isDone(sig)) { b.disabled = true; b.textContent = done; return b; }
+  b.textContent = label;
+  b.onclick = async () => {
+    b.disabled = true;
+    b.textContent = "Un attimo…";
+    try {
+      await run();
+      markDone(sig);
+      b.textContent = done;
+      refreshLive().catch(() => {});
+    } catch (err) {
+      b.textContent = err.message;
+      setTimeout(() => { b.disabled = false; b.textContent = label; }, 5000);
+    }
+  };
+  return b;
+}
+
 // Crea i pulsanti per un messaggio.
 export function actionButtons(actions) {
   return actions.map((a) => {
+    if (a.kind === "event" && calEditOn()) {
+      return calButton(a, `Aggiungi al calendario · ${nice(a.date, a.time)}`, "Aggiunto al calendario",
+        () => calCall("create", { title: a.title, location: a.place, ...span(a.date, a.time, a.minutes) }));
+    }
+    if (a.kind === "cal-move") {
+      return calButton(a, `Sposta «${a.oldTitle}» a ${nice(a.date, a.time)}`, `Spostato a ${nice(a.date, a.time)}`,
+        () => calCall("update", { id: a.id, at: a.at, title: a.title || undefined, ...span(a.date, a.time, a.minutes) }));
+    }
+    if (a.kind === "cal-delete") {
+      return calButton(a, `Cancella «${a.oldTitle}» · ${a.oldWhen}`, `Cancellato: ${a.oldTitle}`,
+        () => calCall("delete", { id: a.id, at: a.at }), true);
+    }
     const link = document.createElement("a");
     link.className = "action";
     link.target = "_blank";

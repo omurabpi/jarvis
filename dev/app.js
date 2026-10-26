@@ -8,6 +8,7 @@ import { initSync } from "./sync.js";
 import { calendarBlock } from "./calendar.js";
 import { WakeWord, wakeAvailable } from "./wake.js";
 import { rememberMic, micForgets } from "./mic.js";
+import { calEditOn, hasLive, calendarEditBlock, initCalendarEdit } from "./calendar-edit.js";
 
 const MAX_HISTORY = 30;
 const $ = (s) => document.querySelector(s);
@@ -341,7 +342,7 @@ function contextBlock() {
   const open = notes.filter((n) => !n.done);
   const rem = open.length ? open.map((n) => `- [${n.id}] ${n.date}${n.time ? " " + n.time : ""} — ${n.text}`).join("\n") : "(nessuno)";
   const book = contacts.length ? contacts.map((c) => c.name).join(", ") : "(vuota)";
-  return `Adesso è ${now}.\n\nCosa sai di ${settings.name}:\n${mem}\n\nPromemoria aperti:\n${rem}\n\nRubrica (solo i nomi: il numero lo inserisce l'app): ${book}${calendarBlock()}`;
+  return `Adesso è ${now}.\n\nCosa sai di ${settings.name}:\n${mem}\n\nPromemoria aperti:\n${rem}\n\nRubrica (solo i nomi: il numero lo inserisce l'app): ${book}${calEditOn() && hasLive() ? calendarEditBlock() : calendarBlock()}`;
 }
 
 function textSystemPrompt() {
@@ -386,7 +387,7 @@ Usa gli strumenti senza annunciarli:
 - dimentica: quando chiede di dimenticare qualcosa
 - promemoria / fatto: per creare o completare promemoria
 - contatto: quando ${settings.name} ti dà il numero di telefono di qualcuno
-- azione: per proporre un pulsante (evento in calendario, WhatsApp, email, chiamata, SMS, mappa) quando prepari qualcosa da inviare o un appuntamento; se il destinatario è in rubrica, metti il suo nome nel campo numero
+- azione: per proporre un pulsante (nuovo evento, spostare o cancellare un evento del calendario, WhatsApp, email, chiamata, SMS, mappa) quando prepari qualcosa da inviare o un appuntamento; se il destinatario è in rubrica, metti il suo nome nel campo numero. Per SPOSTA e CANCELLA usa il codice tra parentesi quadre dell'agenda; se non c'è, il calendario è in sola lettura. La modifica avviene solo quando l'utente tocca il pulsante: diglielo, non dire che è già fatta
 Puoi cercare sul web per informazioni aggiornate.
 
 ${contextBlock()}
@@ -417,8 +418,9 @@ const LIVE_TOOLS = [
         parameters: {
           type: "OBJECT",
           properties: {
-            tipo: { type: "STRING", enum: ["EVENTO", "WHATSAPP", "EMAIL", "CHIAMA", "SMS", "MAPPA"] },
-            titolo: S("Titolo dell'evento"), quando: S("AAAA-MM-GG HH:MM"), durata: S("Minuti"), luogo: S("Luogo o indirizzo"),
+            tipo: { type: "STRING", enum: ["EVENTO", "SPOSTA", "CANCELLA", "WHATSAPP", "EMAIL", "CHIAMA", "SMS", "MAPPA"] },
+            evento: S("Per SPOSTA e CANCELLA: il codice dell'evento tra parentesi quadre nell'agenda, senza parentesi"),
+            titolo: S("Titolo dell'evento (per SPOSTA: nuovo titolo, facoltativo)"), quando: S("AAAA-MM-GG HH:MM (per SPOSTA: il nuovo inizio)"), durata: S("Minuti"), luogo: S("Luogo o indirizzo"),
             testo: S("Testo del messaggio"), destinatario: S("Email del destinatario, se nota"), oggetto: S("Oggetto email"), numero: S("Numero di telefono, oppure il nome del contatto se è in rubrica"),
           },
           required: ["tipo"],
@@ -456,7 +458,8 @@ async function runTool({ name, args }) {
       const a = buildAction(args.tipo, args);
       if (!a) return "Dati insufficienti per il pulsante.";
       // Un messaggio riscritto sostituisce il pulsante precedente dello stesso tipo invece di aggiungerne un altro.
-      a.type = String(args.tipo).toUpperCase();
+      // SPOSTA e CANCELLA valgono per evento: due eventi diversi, due pulsanti.
+      a.type = String(args.tipo).toUpperCase() + (args.evento ? ":" + args.evento : "");
       pending = [...pending.filter((p) => p.type !== a.type), a];
       renderCaptionActions();
       return "Pulsante mostrato all'utente.";
@@ -1074,6 +1077,8 @@ function showCore() {
     store.set("micHint", day);
     toast("Il browser continua a dimenticare il permesso del microfono. In Impostazioni → Autorizzazioni ti dico come farlo smettere.", 7000);
   });
+  // Modifica del Google Calendar: collegamento nelle impostazioni e agenda letta dal vivo.
+  initCalendarEdit({ toast });
   const last = [...chat].reverse().find((m) => m.role === "assistant" && !m.error);
   if (last) capJarvis(last.text);
   else capJarvis(`Eccoti, ${settings.name}. Tocca il reattore quando vuoi parlare.`);

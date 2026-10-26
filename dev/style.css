@@ -373,3 +373,8 @@ body.wake-on[data-state=idle] .status::before {
 .wake-row { display: grid; gap: 6px; }
 .wake-row p { margin: 0; }
 #approvals-guide [data-list] button { box-shadow: none; }
+
+/* ---------- Pulsanti che modificano il calendario ---------- */
+button.action { border: 0; cursor: pointer; text-align: left; }
+.action.warn { background: linear-gradient(180deg, #ff8f84 0%, #e5554a 100%); color: #fff; }
+#caledit-guide input { margin-top: 2px; }
