@@ -1,0 +1,49 @@
+# Compila l'APK Android firmato e lo pubblica sempre allo stesso link:
+# https://github.com/omurabpi/jarvis/releases/download/apk/jarvis.apk
+name: APK Android
+
+on:
+  push:
+    branches: [main]
+    paths: ["android/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Chiave di firma
+        run: echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Compila APK
+        working-directory: android
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: gradle assembleRelease --no-daemon
+
+      - name: Pubblica sul link fisso
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk jarvis.apk
+          gh release delete apk --yes --cleanup-tag || true
+          gh release create apk jarvis.apk --latest \
+            --title "Jarvis per Android" \
+            --notes "Versione 1.${{ github.run_number }}. Scarica jarvis.apk dal telefono e aprilo per installarlo o aggiornarlo."

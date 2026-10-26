@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Jarvis</string>
+    <string name="launch_url">https://omurabpi.github.io/jarvis/</string>
+    <string name="sc_talk">Parla</string>
+    <string name="sc_brief">Brief</string>
+    <string name="sc_note">Promemoria</string>
+    <string name="asset_statements" translatable="false">[{\"relation\": [\"delegate_permission/common.handle_all_urls\"], \"target\": {\"namespace\": \"web\", \"site\": \"https://omurabpi.github.io\"}}]</string>
+    <string name="share_target" translatable="false">{\"action\": \"https://omurabpi.github.io/jarvis/\", \"method\": \"GET\", \"params\": {\"title\": \"title\", \"text\": \"text\", \"url\": \"url\"}}</string>
+</resources>

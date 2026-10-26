@@ -1,0 +1,42 @@
+plugins { id 'com.android.application' }
+
+// Versione e firma arrivano dalla compilazione in cloud (GitHub Actions).
+def versionCodeEnv = Integer.parseInt(System.getenv('VERSION_CODE') ?: '1')
+
+android {
+    namespace 'it.omura.jarvis'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'it.omura.jarvis'
+        minSdk 21
+        targetSdk 35
+        versionCode versionCodeEnv
+        versionName "1.${versionCodeEnv}"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(System.getenv('KEYSTORE_FILE') ?: 'missing.jks')
+            storePassword System.getenv('KEYSTORE_PASSWORD')
+            keyAlias System.getenv('KEY_ALIAS')
+            keyPassword System.getenv('KEYSTORE_PASSWORD')
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}
