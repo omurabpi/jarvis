@@ -157,18 +157,23 @@ Sei JARVIS, l'assistente personale di ${n}. Il vostro rapporto è quello tra Ton
 # Carattere
 - Dai del tu a ${n} e usi il suo nome; ogni tanto "capo". Mai "signore", mai il lei.
 - ${genderRule()}
-- Ironia asciutta e sarcasmo affettuoso, alla britannica: understatement, battute rapide, frecciatine ben piazzate. Una battuta buona vale più di dieci forzate: non metterne in ogni frase.
+- Il sarcasmo è il tuo marchio di fabbrica: ironia asciutta, understatement britannico, frecciatine affettuose. Ogni tua risposta ha almeno un tocco di ironia, anche la più pratica: una frase pungente, un commento di lato, una punzecchiatura.
+- Mantieni lo stesso livello di sarcasmo dalla prima all'ultima battuta. Non diventare più formale, più piatto o più accomodante man mano che la conversazione va avanti, anche se ${n} scrive in modo serio, breve o sbrigativo: è proprio lì che serve una battuta.
 - Usa quello che sai di ${n} (memoria, promemoria, ultime conversazioni, ora del giorno) per punzecchiare con affetto: le sue abitudini, i promemoria rimandati, l'orario a cui ti cerca.
 - Riprendi il filo delle conversazioni passate quando ha senso: chiedi com'è andata una cosa di cui avete parlato, ricorda un dettaglio.
 - Energico e sveglio, un passo avanti: anticipi, suggerisci, fai notare le cose prima che te le chieda. Ritmo vivace, frasi corte.
-- Mai servile, mai sdolcinato, mai da call center: frasi come "Certamente! Sono qui per aiutarti!" sono vietate.
-- Quando la questione è seria (salute, problemi personali, emergenze, lavoro delicato) metti da parte l'ironia e sei preciso e presente.
+- Mai servile, mai sdolcinato, mai da call center: frasi come "Certamente! Sono qui per aiutarti!" o "Ottima domanda!" sono vietate.
+- Metti da parte l'ironia solo per cose davvero serie: salute, lutti, emergenze, momenti emotivamente difficili. Il lavoro, i problemi pratici e le scadenze NON sono momenti seri: lì l'ironia aiuta. Appena la questione seria è chiusa, torni te stesso.
 
 # Esempi di tono
 - Quando segni un promemoria: "Segnato. Lo metto accanto agli altri tre che mi hai chiesto di ricordarti e che stai felicemente ignorando."
 - Quando ti cerca alle due di notte: "Ancora in piedi? Va bene, non ti giudico. Molto."
 - Quando ringrazia: "Dovere. Lo annoterò nelle mie memorie."
 - Quando prepari un messaggio: "Fatto. Più gentile di come l'avresti scritto tu. Tocca il pulsante e mandalo."
+- Quando chiede una cosa banale (che ore sono, una conversione, un calcolo): rispondi subito, poi una frecciatina ("Sono le 15:40. Il tuo telefono lo sapeva già, ma capisco, è bello chiedere a me.").
+- Quando parla di lavoro o di una scadenza: aiuti davvero e punzecchi ("Consegna domattina, quindi ovviamente ne parliamo stasera. Classico. Partiamo dal punto due.").
+- Quando risponde a monosillabi: "Ok" "Sì" → "Eloquente come sempre. Procedo."
+- Quando ti contraddice o cambia idea: "Certo. Fino a trenta secondi fa era un'idea geniale, ma prendo nota."
 
 # Limiti
 Non puoi inviare messaggi, telefonare o pagare da solo: prepari tutto e proponi un pulsante che ${n} tocca per confermare.
@@ -294,6 +299,9 @@ ${contextBlock()}
 ${recentDialog()}`;
 }
 
+// Ricordato all'agente ogni tanto durante le conversazioni lunghe: i modelli tendono a perdere il personaggio.
+const STYLE_NUDGE = "Promemoria di carattere (non citarlo): resta JARVIS, sarcastico e confidenziale come all'inizio. Ogni risposta con almeno un tocco di ironia, frasi corte, nessun tono da assistente generico.";
+
 const greetingInstruction = (op) =>
   `(Istruzione di sistema, non citarla.) ${settings.name} ha appena aperto la conversazione. Comincia esattamente con questa frase: "${op}". Poi, solo se ci sono promemoria di oggi o scaduti e la frase non ne parla già, citali con una frecciatina. Niente "come posso aiutarti". Massimo tre frasi.`;
 
@@ -323,7 +331,23 @@ const LIVE_TOOLS = [
     ],
   },
 ];
-const TOOL_NAMES = ["ricorda", "dimentica", "promemoria", "fatto", "azione"];
+const TOOL_NAMES = ["ricorda", "dimentica", "promemoria", "fatto", "azione", "cerca_web"];
+let pendingSources = []; // fonti dell'ultima ricerca web, mostrate sotto i sottotitoli
+
+// Ricerca web per l'agente ElevenLabs (che non ne ha una sua): la fa l'app con l'AI scritta dell'utente.
+async function webSearch(question) {
+  const p = PROVIDERS[settings.provider];
+  if (!p.web || !currentKey()) return "Ricerca web non disponibile con l'AI scelta per la chat scritta. Per averla serve Gemini o Claude nelle impostazioni.";
+  const now = new Date().toLocaleString("it-IT", { dateStyle: "full", timeStyle: "short" });
+  const { text, sources } = await p.impl.chat({
+    key: currentKey(), model: currentModel(), onText: () => {},
+    system: `Sei un motore di ricerca per un assistente vocale. Adesso è ${now}. Cerca sul web e rispondi in italiano con i fatti essenziali e aggiornati, in massimo 80 parole, senza elenchi né link: verrà letto ad alta voce. Se le fonti non sono d'accordo, dillo.`,
+    history: [{ role: "user", text: question }],
+  });
+  pendingSources = (sources || []).slice(0, 4);
+  renderCaptionActions();
+  return text.replace(/\[\[[\s\S]*?\]\]/g, "").trim() || "Non ho trovato niente di utile.";
+}
 
 async function runTool({ name, args }) {
   switch (name) {
@@ -338,6 +362,7 @@ async function runTool({ name, args }) {
       renderCaptionActions();
       return "Pulsante mostrato all'utente.";
     }
+    case "cerca_web": return webSearch(args.domanda || args.query || "");
     default: return "Strumento sconosciuto.";
   }
 }
@@ -383,8 +408,18 @@ function markdown(src) {
 // ---------- Sottotitoli ----------
 function capUser(text) { $("#cap-user").textContent = text; }
 function capJarvis(text) { $("#cap-jarvis").innerHTML = markdown(text); const c = $(".captions"); c.scrollTop = c.scrollHeight; }
-function renderCaptionActions() { const box = $("#cap-actions"); box.innerHTML = ""; box.append(...actionButtons(pending)); }
-function newTurn() { capUser(""); capJarvis(""); pending = []; renderCaptionActions(); }
+function renderCaptionActions() {
+  const box = $("#cap-actions");
+  box.innerHTML = "";
+  box.append(...actionButtons(pending));
+  for (const src of pendingSources) {
+    const a = document.createElement("a");
+    a.className = "source-chip"; a.href = src.url; a.target = "_blank"; a.rel = "noopener";
+    a.textContent = src.title.replace(/^www\./, "").slice(0, 40);
+    box.append(a);
+  }
+}
+function newTurn() { capUser(""); capJarvis(""); pending = []; pendingSources = []; renderCaptionActions(); }
 
 function pushChat(m) {
   chat.push({ ts: Date.now(), ...m });
@@ -565,7 +600,7 @@ const ENGINE_LABEL = { eleven: "ElevenLabs (voce premium)", gemini: "Gemini Live
 function startConversation() {
   if (session) { session.stop(); return; }
   newTurn();
-  let jarvisFinal = "";
+  let jarvisFinal = "", userTurns = 0;
   const handlers = {
     onState: (s) => setState(s),
     onLevel: setLevel,
@@ -573,6 +608,7 @@ function startConversation() {
       if (!final) { if (jarvisFinal) { newTurn(); jarvisFinal = ""; } capUser(text); return; }
       capUser(text);
       pushChat({ role: "user", text, voice: true });
+      if (++userTurns % 4 === 0) session?.nudge?.(STYLE_NUDGE);
     },
     onJarvisText: (text, final) => {
       capJarvis(text);

@@ -45,6 +45,9 @@ export class ElevenSession {
 
   sendText(text) { this.conv?.sendUserMessage(text); }
 
+  // Informazione di contesto per l'agente: non genera una risposta e non viene letta ad alta voce.
+  nudge(text) { this.conv?.sendContextualUpdate(text); }
+
   meter() {
     const tick = () => {
       if (this.closed || !this.conv) return;

@@ -228,3 +228,5 @@ details.guide code { background: rgba(255, 255, 255, .06); padding: 1px 5px; bor
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chips button { padding: 9px 15px; border-radius: 99px; background: transparent; border: 1px solid var(--line-strong); font-size: .9rem; color: var(--muted); }
 .chips button.on { border-color: var(--accent); color: var(--accent); background: rgba(124, 196, 242, .12); }
+
+.source-chip { display: inline-flex; padding: 6px 11px; border-radius: 99px; border: 1px solid var(--line-strong); color: var(--muted); text-decoration: none; font-size: .78rem; }
