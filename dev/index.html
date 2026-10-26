@@ -5,143 +5,177 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <title>Jarvis Dev</title>
   <meta name="description" content="Jarvis, il tuo assistente personale.">
+  <meta name="theme-color" content="#05070b">
+  <meta name="color-scheme" content="dark">
   <meta name="author" content="Omura Srl">
-  <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0c0e14" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Jarvis Dev">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <!-- Accensione -->
-  <div id="boot" class="boot" hidden aria-hidden="true">
-    <div class="reactor-slot xl"></div>
-    <p class="credit">developed by <span class="omura"></span></p>
-  </div>
+<body data-state="idle">
 
-  <!-- Configurazione iniziale -->
-  <section id="setup" class="screen" hidden>
-    <div class="setup-card">
-      <div class="reactor-slot lg"></div>
-      <h1>Ciao, sono Jarvis.</h1>
-      <p class="muted">Scegli l'intelligenza artificiale che preferisci e incolla la tua chiave. Resta solo su questo telefono.</p>
+  <!-- ============ Primo avvio guidato ============ -->
+  <section id="onboarding" class="screen onboarding" hidden>
+    <div class="ob-reactor"><div class="reactor-slot ob"></div></div>
 
-      <form id="setup-form">
-        <label>Come ti chiami?
-          <input id="setup-name" autocomplete="given-name" placeholder="Il tuo nome" required>
-        </label>
-
-        <label>Intelligenza artificiale
-          <select id="setup-provider"></select>
-        </label>
-
-        <div id="setup-howto" class="howto"></div>
-
-        <label>Chiave API
-          <input id="setup-key" type="password" autocomplete="off" spellcheck="false" placeholder="Incolla la chiave" required>
-        </label>
-
-        <p id="setup-error" class="error" hidden></p>
-        <button id="setup-submit" type="submit" class="primary">Attiva Jarvis</button>
-      </form>
-      <p class="credit">developed by <span class="omura" role="img" aria-label="Omura"></span></p>
+    <div class="ob-step" data-step="name">
+      <p class="eyebrow">Sistema online</p>
+      <h1 class="type" data-text="Buongiorno. Sono Jarvis."></h1>
+      <p class="lead">Il suo assistente personale. Come preferisce che la chiami?</p>
+      <input id="ob-name" autocomplete="given-name" placeholder="Il suo nome" enterkeyhint="next">
+      <button class="primary wide" data-next="brain">Continua</button>
     </div>
+
+    <div class="ob-step" data-step="brain" hidden>
+      <p class="eyebrow">Passo 1 di 3</p>
+      <h1>Per pensare mi serve un cervello.</h1>
+      <p class="lead">Scelga l'intelligenza artificiale. Le consiglio Gemini: è gratuita e mi permette di parlarle a voce in tempo reale.</p>
+      <button class="card choice-card selected" data-brain="gemini">
+        <span class="card-title">Gemini di Google <span class="pill">Consigliato</span></span>
+        <span class="card-sub">Gratis · conversazione vocale in tempo reale · ricerca web</span>
+      </button>
+      <button class="card choice-card" data-brain="other">
+        <span class="card-title">Un'altra AI</span>
+        <span class="card-sub">Claude, ChatGPT, Mistral, Groq, DeepSeek, Grok, OpenRouter</span>
+      </button>
+      <select id="ob-provider" hidden></select>
+      <button class="primary wide" data-next="key">Continua</button>
+    </div>
+
+    <div class="ob-step" data-step="key" hidden>
+      <p class="eyebrow">Passo 2 di 3</p>
+      <h1 id="ob-key-title">Colleghiamo Gemini.</h1>
+      <ol class="steps" id="ob-key-steps"></ol>
+      <a id="ob-key-open" class="primary wide button-link" target="_blank" rel="noopener">Apri la pagina della chiave</a>
+      <button id="ob-paste" class="ghost wide">Ho copiato la chiave: incollala</button>
+      <input id="ob-key" type="password" autocomplete="off" spellcheck="false" placeholder="…oppure incollala qui">
+      <p id="ob-key-msg" class="small" hidden></p>
+    </div>
+
+    <div class="ob-step" data-step="voice" hidden>
+      <p class="eyebrow">Passo 3 di 3</p>
+      <h1>Ultima cosa: la mia voce.</h1>
+      <p class="lead">Per parlarmi mi serve il microfono. Ascolto solo quando tocca il reattore.</p>
+      <label>Voce
+        <select id="ob-voice"></select>
+      </label>
+      <button id="ob-finish" class="primary wide">Attiva il microfono e iniziamo</button>
+      <button id="ob-skip-mic" class="ghost wide">Per ora preferisco scrivere</button>
+    </div>
+    <p class="credit">developed by <span class="omura" role="img" aria-label="Omura"></span></p>
   </section>
 
-  <!-- App principale -->
-  <section id="main" class="screen" hidden>
-    <header class="topbar glass">
-      <div class="topbar-row">
-      <div class="brand"><div class="reactor-slot sm"></div><div><div>Jarvis <span class="dev-tag">DEV</span></div><div id="model-chip" class="model-chip"></div></div></div>
-      <nav class="tabs" role="tablist">
-        <button role="tab" data-tab="chat" aria-selected="true">Chat</button>
-        <button role="tab" data-tab="notes" aria-selected="false">Promemoria <span id="notes-badge" class="badge" hidden></span></button>
-        <button role="tab" data-tab="settings" aria-selected="false" aria-label="Impostazioni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
-      </nav>
-      </div>
-      <div id="install-banner" class="banner" hidden>
-        <span id="install-text"></span>
-        <button id="install-btn" class="ghost" hidden>Installa</button>
-        <button id="install-close" class="close" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      </div>
+  <!-- ============ Schermata principale ============ -->
+  <section id="core" class="screen core" hidden>
+    <header class="hud">
+      <div class="hud-time"><span id="clock">--:--</span><span id="date"></span></div>
+      <div class="hud-title">J.A.R.V.I.S. <span class="dev-tag">DEV</span></div>
+      <button class="icon-btn" data-open="settings" aria-label="Impostazioni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
     </header>
 
+    <main class="stage">
+      <button id="reactor-btn" class="reactor-btn" aria-label="Parla con Jarvis">
+        <svg class="hud-rings" viewBox="-100 -100 200 200" aria-hidden="true">
+          <circle class="hr1" r="96"/><circle class="hr2" r="90"/><circle class="hr3" r="99"/>
+        </svg>
+        <div class="reactor-slot core-r"></div>
+      </button>
+      <p id="status" class="status">Tocchi il reattore per parlare</p>
 
-    <!-- Chat -->
-    <div id="tab-chat" class="tab">
-      <div id="messages" class="messages" aria-live="polite"></div>
-      <div class="dock glass">
-      <div class="quick">
-        <button data-quick="brief">Brief del giorno</button>
-        <button data-quick="news">Notizie</button>
-        <button data-quick="email">Scrivi una email</button>
+      <div class="captions" aria-live="polite">
+        <p id="cap-user" class="cap-user"></p>
+        <div id="cap-jarvis" class="cap-jarvis"></div>
+        <div id="cap-actions" class="app-actions"></div>
       </div>
-      <form id="composer" class="composer">
-        <button id="mic" type="button" class="icon" aria-label="Parla" hidden><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
-        <textarea id="input" rows="1" placeholder="Chiedi a Jarvis…" enterkeyhint="send"></textarea>
-        <button id="send" type="submit" class="icon primary" aria-label="Invia"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
-      </form>
-      <p class="credit">developed by <span class="omura" role="img" aria-label="Omura"></span></p>
-      </div>
-    </div>
+    </main>
 
-    <!-- Promemoria -->
-    <div id="tab-notes" class="tab" hidden>
-      <form id="note-form" class="note-form">
-        <input id="note-text" placeholder="Nuovo promemoria…" required>
-        <input id="note-date" type="date" aria-label="Scadenza">
-        <button type="submit" class="primary">Aggiungi</button>
-      </form>
-      <p class="muted small">Puoi anche dire a Jarvis "ricordami di…" in chat.</p>
-      <ul id="notes" class="notes"></ul>
-      <p class="credit">developed by <span class="omura" role="img" aria-label="Omura"></span></p>
-    </div>
+    <form id="composer" class="composer" hidden>
+      <textarea id="input" rows="1" placeholder="Scriva a Jarvis…" enterkeyhint="send"></textarea>
+      <button type="submit" class="send" aria-label="Invia"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+    </form>
 
-    <!-- Impostazioni -->
-    <div id="tab-settings" class="tab" hidden>
-      <form id="settings-form" class="settings">
-        <label>Il tuo nome <input id="set-name"></label>
-        <label>Intelligenza artificiale <select id="set-provider"></select></label>
-        <div id="set-howto" class="howto"></div>
-        <label>Chiave API <input id="set-key" type="password" autocomplete="off" spellcheck="false" placeholder="Incolla la chiave"></label>
-        <label>Modello
-          <select id="set-model" disabled><option>Salva la chiave per vedere i modelli</option></select>
-        </label>
-        <label class="choice"><input id="set-voice" type="checkbox"> <span>Leggi le risposte ad alta voce</span></label>
-        <label class="choice"><input id="set-motion" type="checkbox"> <span>Animazioni del reattore</span></label>
-        <p id="settings-msg" class="small" hidden></p>
-        <button type="submit" class="primary">Salva</button>
-      </form>
-      <details class="guide">
-        <summary>Widget, Siri e scorciatoie</summary>
-        <h4>iPhone: widget e "Ehi Siri"</h4>
-        <ol>
-          <li>Apri l'app <strong>Comandi</strong> e tocca <strong>+</strong></li>
-          <li>Aggiungi l'azione <strong>Apri URL</strong> con questo indirizzo:<br><code id="guide-url-talk"></code></li>
-          <li>Chiama il comando <strong>Jarvis</strong>: ora puoi dire "Ehi Siri, Jarvis"</li>
-          <li>Sulla schermata Home tieni premuto, tocca <strong>Modifica → Aggiungi widget → Comandi</strong> e scegli Jarvis</li>
-        </ol>
-        <p class="small muted">Altri comandi utili: <code id="guide-url-brief"></code> per il brief, <code id="guide-url-note"></code> per un promemoria. Su iPhone i comandi aprono Jarvis in Safari.</p>
-        <h4>Android</h4>
-        <p class="small"><a href="https://github.com/omurabpi/jarvis/releases/download/apk/jarvis.apk"><strong>Scarica l'app Android (APK)</strong></a>: aprila dal telefono e consenti l'installazione. Si aggiorna da sola insieme al sito.</p>
-        <ol>
-          <li>Tieni premuta l'icona di Jarvis: trovi <strong>Parla</strong>, <strong>Brief</strong> e <strong>Promemoria</strong>, che puoi trascinare sulla Home</li>
-          <li>Da qualsiasi app tocca <strong>Condividi → Jarvis</strong> per fargli riassumere o rispondere</li>
-        </ol>
-      </details>
-      <div class="danger-zone">
-        <button id="clear-chat" class="ghost">Cancella la conversazione</button>
-        <button id="reset-all" class="ghost danger">Reset completo (cancella tutto)</button>
-      </div>
-      <p class="muted small">Chiavi e dati restano solo su questo telefono. Jarvis non invia email né fa acquisti: prepara bozze che invii tu.</p>
+    <nav class="dock">
+      <button id="kb-toggle" aria-label="Scrivi"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg><span>Scrivi</span></button>
+      <button data-open="history" aria-label="Cronologia"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5M12 7v5l3 2"/></svg><span>Cronologia</span></button>
+      <button data-open="notes" aria-label="Promemoria"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg><span>Promemoria</span><b id="notes-badge" class="badge" hidden></b></button>
+      <button data-open="memory" aria-label="Memoria"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0-6 6c0 2.2 1.2 3.6 2 4.5V17h8v-3.5c.8-.9 2-2.3 2-4.5a6 6 0 0 0-6-6zM9 21h6"/></svg><span>Memoria</span></button>
       <p class="credit">developed by <span class="omura" role="img" aria-label="Omura"></span></p>
-    </div>
+    </nav>
   </section>
+
+  <!-- ============ Pannelli ============ -->
+  <section id="sheet-history" class="sheet" hidden>
+    <header><h2>Cronologia</h2><button class="icon-btn" data-close aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <div id="messages" class="messages"></div>
+    <div class="sheet-foot"><button id="clear-chat" class="ghost">Cancella la cronologia</button></div>
+  </section>
+
+  <section id="sheet-notes" class="sheet" hidden>
+    <header><h2>Promemoria</h2><button class="icon-btn" data-close aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <form id="note-form" class="note-form">
+      <input id="note-text" placeholder="Nuovo promemoria…" required>
+      <input id="note-date" type="date" aria-label="Scadenza">
+      <button type="submit" class="primary">Aggiungi</button>
+    </form>
+    <p class="small muted">Oppure dica a Jarvis: "ricordami di…"</p>
+    <ul id="notes" class="list"></ul>
+  </section>
+
+  <section id="sheet-memory" class="sheet" hidden>
+    <header><h2>Cosa so di lei</h2><button class="icon-btn" data-close aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <p class="small muted">Jarvis impara da solo dalle conversazioni. Può anche dirgli "ricorda che…" o "dimentica che…". Tutto resta su questo telefono.</p>
+    <form id="memory-form" class="note-form one">
+      <input id="memory-text" placeholder="Aggiungi qualcosa che Jarvis deve sapere…" required>
+      <button type="submit" class="primary">Aggiungi</button>
+    </form>
+    <ul id="memory" class="list"></ul>
+  </section>
+
+  <section id="sheet-settings" class="sheet" hidden>
+    <header><h2>Impostazioni</h2><button class="icon-btn" data-close aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <form id="settings-form" class="settings">
+      <label>Il suo nome <input id="set-name"></label>
+      <label>Intelligenza artificiale <select id="set-provider"></select></label>
+      <div id="set-howto" class="howto"></div>
+      <label>Chiave API <input id="set-key" type="password" autocomplete="off" spellcheck="false" placeholder="Incolla la chiave"></label>
+      <label>Modello per la chat scritta
+        <select id="set-model" disabled><option>Salva la chiave per vedere i modelli</option></select>
+      </label>
+      <label>Voce di Jarvis <select id="set-voice"></select></label>
+      <p id="voice-engine" class="small muted"></p>
+      <label class="check"><input id="set-speak" type="checkbox"> <span>Leggi ad alta voce le risposte scritte</span></label>
+      <label class="check"><input id="set-motion" type="checkbox"> <span>Animazioni</span></label>
+      <p id="settings-msg" class="small" hidden></p>
+      <button type="submit" class="primary wide">Salva</button>
+    </form>
+    <details class="guide">
+      <summary>Widget, Siri e scorciatoie</summary>
+      <h4>iPhone: widget e "Ehi Siri"</h4>
+      <ol>
+        <li>Apri l'app <strong>Comandi</strong> e tocca <strong>+</strong></li>
+        <li>Aggiungi l'azione <strong>Apri URL</strong> con: <code id="guide-url-talk"></code></li>
+        <li>Chiama il comando <strong>Jarvis</strong>: ora puoi dire "Ehi Siri, Jarvis"</li>
+        <li>Sulla Home: tieni premuto → <strong>Modifica → Aggiungi widget → Comandi</strong></li>
+      </ol>
+      <h4>Android</h4>
+      <p class="small"><a href="https://github.com/omurabpi/jarvis/releases/download/apk/jarvis.apk"><strong>Scarica l'app Android (APK)</strong></a> — si aggiorna da sola insieme al sito.</p>
+      <ol>
+        <li>Tieni premuta l'icona: <strong>Parla</strong>, <strong>Brief</strong>, <strong>Promemoria</strong></li>
+        <li>Da qualsiasi app: <strong>Condividi → Jarvis</strong></li>
+      </ol>
+    </details>
+    <div class="danger-zone">
+      <button id="reset-all" class="ghost danger">Reset completo (cancella tutto)</button>
+    </div>
+    <p class="credit">developed by <span class="omura" role="img" aria-label="Omura"></span></p>
+  </section>
+
+  <div id="toast" class="toast" hidden></div>
 
   <script type="module" src="app.js"></script>
 </body>

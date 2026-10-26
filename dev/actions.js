@@ -27,6 +27,20 @@ export function parseActions(text) {
   return { clean, actions };
 }
 
+// Stessa azione richiesta con argomenti con nome (strumenti della conversazione vocale).
+const FIELDS = {
+  EVENTO: ["titolo", "quando", "durata", "luogo"],
+  WHATSAPP: ["testo", "numero"],
+  EMAIL: ["destinatario", "oggetto", "testo"],
+  CHIAMA: ["numero"],
+  SMS: ["numero", "testo"],
+  MAPPA: ["luogo"],
+};
+export function buildAction(tipo, args = {}) {
+  const type = String(tipo || "").toUpperCase();
+  return FIELDS[type] ? build(type, FIELDS[type].map((k) => String(args[k] ?? "").trim())) : null;
+}
+
 function build(type, f) {
   switch (type) {
     case "EVENTO": {
