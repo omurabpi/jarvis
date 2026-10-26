@@ -236,6 +236,8 @@ body[data-state=listening] .status, body[data-state=speaking] .status { color: #
 .note-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
 .note-form #note-text { grid-column: 1 / -1; }
 .note-form.one { grid-template-columns: 1fr auto; }
+.note-form #contact-name { grid-column: 1 / -1; }
+.sheet-sub { margin: 28px 0 0; font-size: 1.25rem; font-weight: 650; letter-spacing: -.01em; }
 .list { list-style: none; margin: 6px 0 0; padding: 0; }
 .list li { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
 .list li.done .l-text { text-decoration: line-through; color: var(--dim); }

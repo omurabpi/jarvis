@@ -135,6 +135,14 @@
     <p class="small muted">Jarvis impara da solo da quello che vi dite, a voce o per iscritto, e aggiorna questa lista dopo ogni conversazione. Se qualcosa non va, cancellalo o digli "dimentica che…". Tutto resta su questo telefono.</p>
     <p id="memory-status" class="small muted"></p>
     <ul id="memory" class="list"></ul>
+    <h3 class="sheet-sub">Rubrica</h3>
+    <p class="small muted">Di' a Jarvis "il numero di Marco è…" e da lì in poi i pulsanti aprono direttamente la chat giusta. I numeri restano qui: all'AI arrivano solo i nomi.</p>
+    <form id="contact-form" class="note-form">
+      <input id="contact-name" placeholder="Nome" autocomplete="off" required>
+      <input id="contact-phone" type="tel" placeholder="Numero" autocomplete="off" required>
+      <button type="submit" class="primary">Aggiungi</button>
+    </form>
+    <ul id="contacts" class="list"></ul>
   </section>
 
   <section id="sheet-settings" class="sheet" hidden>

@@ -5,15 +5,30 @@
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const enc = encodeURIComponent;
 const phone = (s = "") => s.replace(/[^\d+]/g, "");
+// Formato internazionale (serve a wa.me); senza prefisso si assume un numero italiano.
+const intl = (n) => !n || n.startsWith("+") ? n : n.startsWith("00") ? "+" + n.slice(2) : n.startsWith("39") && n.length >= 11 ? "+" + n : "+39" + n;
+export const normalizePhone = (s) => intl(phone(String(s || "")));
+
+// Rubrica: l'app registra qui come trovare un contatto dal nome ("Marco" → numero).
+let phoneBook = () => null;
+export function usePhoneBook(find) { phoneBook = find; }
+
+// Il campo numero può contenere un numero oppure il nome di un contatto in rubrica.
+function resolve(s = "") {
+  const num = phone(s);
+  if (num.replace("+", "").length >= 6) return { num, name: "" };
+  const c = s.trim() ? phoneBook(s.trim()) : null;
+  return c ? { num: c.phone, name: c.name } : { num: "", name: "" };
+}
 
 export const ACTIONS_PROMPT = `Azioni sul telefono — quando è utile, proponi a fine risposta uno o più pulsanti con righe esattamente in questi formati (i campi tra parentesi quadre sono facoltativi, lasciali vuoti se non li conosci):
 [[AZIONE: EVENTO | titolo | AAAA-MM-GG HH:MM | durata in minuti | [luogo]]]
-[[AZIONE: WHATSAPP | testo del messaggio | [numero con prefisso]]]
+[[AZIONE: WHATSAPP | testo del messaggio | [numero con prefisso, oppure nome in rubrica]]]
 [[AZIONE: EMAIL | [destinatario] | oggetto | testo]]
-[[AZIONE: CHIAMA | numero]]
-[[AZIONE: SMS | [numero] | testo]]
+[[AZIONE: CHIAMA | numero oppure nome in rubrica]]
+[[AZIONE: SMS | [numero oppure nome in rubrica] | testo]]
 [[AZIONE: MAPPA | luogo o indirizzo]]
-Usale per appuntamenti, messaggi e email che hai scritto, numeri e luoghi citati. Non inventare numeri o indirizzi email: se non li conosci lascia il campo vuoto.`;
+Usale per appuntamenti, messaggi e email che hai scritto, numeri e luoghi citati. Se il destinatario è in rubrica scrivi il suo nome al posto del numero: l'app lo trova da sola. Non inventare numeri o indirizzi email: se non li conosci lascia il campo vuoto.`;
 
 // Estrae le azioni dal testo. Restituisce il testo pulito e l'elenco delle azioni valide.
 export function parseActions(text) {
@@ -50,9 +65,10 @@ function build(type, f) {
       return { kind: "event", label: "Aggiungi al calendario", title, date: m.slice(1, 4).join("-"), time: m[4] ? `${m[4]}:${m[5]}` : null, minutes: parseInt(minutes) || 60, place: place || "" };
     }
     case "WHATSAPP": {
-      const [body, num] = f;
+      const [body, to] = f;
       if (!body) return null;
-      return { kind: "link", label: "Invia su WhatsApp", href: `https://wa.me/${phone(num).replace(/^\+/, "")}?text=${enc(body)}` };
+      const c = resolve(to);
+      return { kind: "link", label: "Invia su WhatsApp" + (c.name ? " a " + c.name : ""), href: `https://wa.me/${intl(c.num).replace(/^\+/, "")}?text=${enc(body)}` };
     }
     case "EMAIL": {
       const [to, subject, body] = f;
@@ -60,13 +76,14 @@ function build(type, f) {
       return { kind: "link", label: "Scrivi email", href: `mailto:${to || ""}?subject=${enc(subject || "")}&body=${enc(body || "")}` };
     }
     case "CHIAMA": {
-      const num = phone(f[0]);
-      return num ? { kind: "link", label: "Chiama " + num, href: "tel:" + num } : null;
+      const c = resolve(f[0]);
+      return c.num ? { kind: "link", label: "Chiama " + (c.name || c.num), href: "tel:" + c.num } : null;
     }
     case "SMS": {
-      const [num, body] = f;
+      const [to, body] = f;
       if (!body) return null;
-      return { kind: "link", label: "Invia SMS", href: `sms:${phone(num)}${isIOS ? "&" : "?"}body=${enc(body)}` };
+      const c = resolve(to);
+      return { kind: "link", label: "Invia SMS" + (c.name ? " a " + c.name : ""), href: `sms:${c.num}${isIOS ? "&" : "?"}body=${enc(body)}` };
     }
     case "MAPPA": {
       const q = f[0];

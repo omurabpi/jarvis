@@ -1,6 +1,6 @@
 // Jarvis — assistente personale vocale. Web app statica: chiavi e dati restano sul telefono.
 import { PROVIDERS, ProviderError } from "./providers.js";
-import { ACTIONS_PROMPT, parseActions, actionButtons, buildAction } from "./actions.js";
+import { ACTIONS_PROMPT, parseActions, actionButtons, buildAction, usePhoneBook, normalizePhone } from "./actions.js";
 import { LiveSession, VOICES, pickLiveModel } from "./voice.js";
 import { ElevenSession, elevenAvailable } from "./eleven.js";
 
@@ -19,6 +19,7 @@ let settings = migrate(store.get("settings", null));
 let chat = store.get("chat", []);
 let notes = store.get("notes", []);
 let memory = store.get("memory", []);
+let contacts = store.get("contacts", []);
 let modelLists = store.get("models", {});
 let session = null;       // conversazione vocale in corso
 let pending = [];         // pulsanti proposti nel turno corrente
@@ -109,6 +110,34 @@ function forget(idOrText) {
   renderMemory();
   return before !== memory.length;
 }
+
+// ---------- Rubrica ----------
+// Nome → numero, solo su questo telefono. All'AI arrivano i nomi; il numero lo mette l'app nei pulsanti.
+const fold = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+function findContact(q) {
+  const k = fold(q), words = (s) => fold(s).split(" ");
+  if (!k) return null;
+  return contacts.find((c) => fold(c.name) === k)
+    || contacts.find((c) => words(c.name).includes(k) || words(k).includes(fold(c.name)))
+    || null;
+}
+function addContact(name, num) {
+  name = String(name || "").trim();
+  const phone = normalizePhone(num);
+  if (!name || phone.replace("+", "").length < 6) return null;
+  let c = contacts.find((x) => fold(x.name) === fold(name));
+  if (c) c.phone = phone;
+  else contacts.push((c = { id: uid(), name, phone }));
+  store.set("contacts", contacts);
+  renderContacts();
+  return c;
+}
+function removeContact(id) {
+  contacts = contacts.filter((c) => c.id !== id);
+  store.set("contacts", contacts);
+  renderContacts();
+}
+usePhoneBook(findContact);
 function addNote(text, date, time) {
   const n = { id: uid(), text: String(text).trim(), date: date || today(), time: time || "", done: false };
   notes.push(n);
@@ -292,7 +321,8 @@ function contextBlock() {
   const mem = memory.length ? memory.map((m) => `- [${m.id}] ${m.text}`).join("\n") : "(ancora niente)";
   const open = notes.filter((n) => !n.done);
   const rem = open.length ? open.map((n) => `- [${n.id}] ${n.date}${n.time ? " " + n.time : ""} — ${n.text}`).join("\n") : "(nessuno)";
-  return `Adesso è ${now}.\n\nCosa sai di ${settings.name}:\n${mem}\n\nPromemoria aperti:\n${rem}`;
+  const book = contacts.length ? contacts.map((c) => c.name).join(", ") : "(vuota)";
+  return `Adesso è ${now}.\n\nCosa sai di ${settings.name}:\n${mem}\n\nPromemoria aperti:\n${rem}\n\nRubrica (solo i nomi: il numero lo inserisce l'app): ${book}`;
 }
 
 function textSystemPrompt() {
@@ -310,6 +340,7 @@ Comandi da aggiungere in fondo alla risposta, una riga ciascuno, senza citarli n
 [[FATTO: id]] quando dice di aver completato un promemoria
 [[MEMORIA: informazione]] quando rivela qualcosa di stabile su di sé (persone, gusti, abitudini, lavoro, progetti): fallo spesso e senza chiedere
 [[DIMENTICA: id]] quando chiede di dimenticare qualcosa
+[[CONTATTO: nome | numero]] quando ti dà il numero di telefono di qualcuno; poi nelle azioni usa il nome al posto del numero
 
 ${ACTIONS_PROMPT}`;
 }
@@ -335,7 +366,8 @@ Usa gli strumenti senza annunciarli:
 - ricorda: ogni volta che ${settings.name} rivela qualcosa di stabile su di sé (persone, gusti, abitudini, lavoro, progetti)
 - dimentica: quando chiede di dimenticare qualcosa
 - promemoria / fatto: per creare o completare promemoria
-- azione: per proporre un pulsante (evento in calendario, WhatsApp, email, chiamata, SMS, mappa) quando prepari qualcosa da inviare o un appuntamento
+- contatto: quando ${settings.name} ti dà il numero di telefono di qualcuno
+- azione: per proporre un pulsante (evento in calendario, WhatsApp, email, chiamata, SMS, mappa) quando prepari qualcosa da inviare o un appuntamento; se il destinatario è in rubrica, metti il suo nome nel campo numero
 Puoi cercare sul web per informazioni aggiornate.
 
 ${contextBlock()}
@@ -359,6 +391,7 @@ const LIVE_TOOLS = [
       { name: "dimentica", description: "Cancella un'informazione dalla memoria.", parameters: { type: "OBJECT", properties: { id: S("Id dell'informazione, oppure parte del testo") }, required: ["id"] } },
       { name: "promemoria", description: "Crea un promemoria.", parameters: { type: "OBJECT", properties: { testo: S("Cosa ricordare"), data: S("AAAA-MM-GG, oggi se non indicata"), ora: S("HH:MM, facoltativa") }, required: ["testo"] } },
       { name: "fatto", description: "Segna come completato un promemoria.", parameters: { type: "OBJECT", properties: { id: S("Id del promemoria") }, required: ["id"] } },
+      { name: "contatto", description: "Salva in rubrica il numero di telefono di una persona.", parameters: { type: "OBJECT", properties: { nome: S("Nome con cui l'utente chiama la persona"), numero: S("Numero di telefono") }, required: ["nome", "numero"] } },
       {
         name: "azione",
         description: "Mostra all'utente un pulsante che apre un'altra app già compilata.",
@@ -367,7 +400,7 @@ const LIVE_TOOLS = [
           properties: {
             tipo: { type: "STRING", enum: ["EVENTO", "WHATSAPP", "EMAIL", "CHIAMA", "SMS", "MAPPA"] },
             titolo: S("Titolo dell'evento"), quando: S("AAAA-MM-GG HH:MM"), durata: S("Minuti"), luogo: S("Luogo o indirizzo"),
-            testo: S("Testo del messaggio"), destinatario: S("Email del destinatario, se nota"), oggetto: S("Oggetto email"), numero: S("Numero di telefono, se noto"),
+            testo: S("Testo del messaggio"), destinatario: S("Email del destinatario, se nota"), oggetto: S("Oggetto email"), numero: S("Numero di telefono, oppure il nome del contatto se è in rubrica"),
           },
           required: ["tipo"],
         },
@@ -375,7 +408,7 @@ const LIVE_TOOLS = [
     ],
   },
 ];
-const TOOL_NAMES = ["ricorda", "dimentica", "promemoria", "fatto", "azione", "cerca_web"];
+const TOOL_NAMES = ["ricorda", "dimentica", "promemoria", "fatto", "contatto", "azione", "cerca_web"];
 let pendingSources = []; // fonti dell'ultima ricerca web, mostrate sotto i sottotitoli
 
 // Ricerca web per l'agente ElevenLabs (che non ne ha una sua): la fa l'app con l'AI scritta dell'utente.
@@ -399,6 +432,7 @@ async function runTool({ name, args }) {
     case "dimentica": return forget(args.id) ? "Dimenticato." : "Non trovato.";
     case "promemoria": { const n = addNote(args.testo, args.data, args.ora); return `Promemoria salvato per ${n.date}${n.time ? " alle " + n.time : ""}.`; }
     case "fatto": return markDone(args.id) ? "Completato." : "Promemoria non trovato.";
+    case "contatto": { const c = addContact(args.nome, args.numero); return c ? `Salvato in rubrica: ${c.name}.` : "Mi servono il nome e il numero completo."; }
     case "azione": {
       const a = buildAction(args.tipo, args);
       if (!a) return "Dati insufficienti per il pulsante.";
@@ -421,6 +455,7 @@ function applyCommands(text) {
     .replace(/\[\[FATTO:\s*([\w-]+)\s*\]\]/g, (_, id) => { const n = markDone(id); if (n) saved.push("Fatto: " + n.text); return ""; })
     .replace(/\[\[MEMORIA:\s*([^\]]+?)\]\]/g, (_, f) => { addMemory(f); return ""; })
     .replace(/\[\[DIMENTICA:\s*([^\]]+?)\]\]/g, (_, id) => { forget(id.trim()); return ""; })
+    .replace(/\[\[CONTATTO:\s*([^|\]]+?)\s*\|\s*([^\]]+?)\]\]/g, (_, name, num) => { const c = addContact(name, num); if (c) saved.push("In rubrica: " + c.name); return ""; })
     .trim();
   return { clean, saved, actions };
 }
@@ -499,7 +534,8 @@ Tieni solo informazioni stabili e utili in futuro: persone della sua vita e rela
 Ignora richieste momentanee, domande generiche, battute e ciò che dice Jarvis su sé stesso.
 Ogni informazione: una frase breve in terza persona, in italiano (es. "Lavora in Omura come consulente").
 Non duplicare ciò che è già noto; se un'informazione nuova corregge o precisa una vecchia, aggiornala.
-Rispondi SOLO con JSON valido, senza testo attorno: {"aggiungi": ["..."], "aggiorna": [{"id": "...", "testo": "..."}], "rimuovi": ["id"]}. Liste vuote se non c'è niente.`;
+I numeri di telefono non vanno in memoria ma in "contatti": solo quelli che ${n} attribuisce esplicitamente a una persona o a un'attività, con il nome che usa lui.
+Rispondi SOLO con JSON valido, senza testo attorno: {"aggiungi": ["..."], "aggiorna": [{"id": "...", "testo": "..."}], "rimuovi": ["id"], "contatti": [{"nome": "...", "numero": "..."}]}. Liste vuote se non c'è niente.`;
   try {
     const { impl } = PROVIDERS[settings.provider];
     const { text } = await impl.chat({
@@ -515,6 +551,10 @@ Rispondi SOLO con JSON valido, senza testo attorno: {"aggiungi": ["..."], "aggio
       if (m && u.testo && u.testo !== m.text) { m.text = String(u.testo).trim(); m.date = today(); changes++; }
     }
     for (const id of json.rimuovi || []) if (memory.some((x) => x.id === id)) { memory = memory.filter((x) => x.id !== id); changes++; }
+    for (const c of json.contatti || []) {
+      const old = findContact(c.nome)?.phone, saved = addContact(c.nome, c.numero);
+      if (saved && saved.phone !== old) changes++;
+    }
     store.set("memory", memory);
     renderMemory();
     learnedUntil = until;
@@ -757,6 +797,20 @@ function renderMemory() {
     li.querySelector(".l-text").textContent = m.text;
     li.querySelector(".l-sub").textContent = "Appreso il " + fmtDate(m.date);
     li.querySelector(".del").onclick = () => forget(m.id);
+    ul.append(li);
+  }
+  renderContacts();
+}
+
+function renderContacts() {
+  const ul = $("#contacts");
+  ul.innerHTML = contacts.length ? "" : '<li class="muted">Vuota: dammi un numero e lo ricordo io.</li>';
+  for (const c of [...contacts].sort((a, b) => a.name.localeCompare(b.name, "it"))) {
+    const li = document.createElement("li");
+    li.innerHTML = `<div class="l-body"><div class="l-text"></div><div class="l-sub"></div></div><button class="del" aria-label="Elimina">${X}</button>`;
+    li.querySelector(".l-text").textContent = c.name;
+    li.querySelector(".l-sub").textContent = c.phone;
+    li.querySelector(".del").onclick = () => removeContact(c.id);
     ul.append(li);
   }
 }
@@ -1015,6 +1069,11 @@ function bindCore() {
 
   $("#note-date").value = today();
   $("#note-form").onsubmit = (e) => { e.preventDefault(); const t = $("#note-text").value.trim(); if (t) { addNote(t, $("#note-date").value); $("#note-text").value = ""; } };
+  $("#contact-form").onsubmit = (e) => {
+    e.preventDefault();
+    if (addContact($("#contact-name").value, $("#contact-phone").value)) e.target.reset();
+    else toast("Mi servono un nome e un numero completo.");
+  };
   $("#clear-chat").onclick = () => { chat = []; store.set("chat", chat); renderHistory(); newTurn(); };
 
   $("#set-provider").onchange = onSettingsProvider;
