@@ -128,11 +128,8 @@
 
   <section id="sheet-memory" class="sheet" hidden>
     <header><h2>Cosa so di te</h2><button class="icon-btn" data-close aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
-    <p class="small muted">Jarvis impara da solo dalle conversazioni. Puoi anche dirgli "ricorda che…" o "dimentica che…". Tutto resta su questo telefono.</p>
-    <form id="memory-form" class="note-form one">
-      <input id="memory-text" placeholder="Aggiungi qualcosa che Jarvis deve sapere…" required>
-      <button type="submit" class="primary">Aggiungi</button>
-    </form>
+    <p class="small muted">Jarvis impara da solo da quello che vi dite, a voce o per iscritto, e aggiorna questa lista dopo ogni conversazione. Se qualcosa non va, cancellalo o digli "dimentica che…". Tutto resta su questo telefono.</p>
+    <p id="memory-status" class="small muted"></p>
     <ul id="memory" class="list"></ul>
   </section>
 

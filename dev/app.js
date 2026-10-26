@@ -302,6 +302,60 @@ function pushChat(m) {
   chat = chat.slice(-300);
   store.set("chat", chat);
   if (!$("#sheet-history").hidden) renderHistory();
+  if (m.role === "assistant" && !m.error) scheduleLearning();
+}
+
+// ---------- Apprendimento automatico ----------
+// Dopo le conversazioni (voce o testo) un passaggio silenzioso estrae dal dialogo
+// le informazioni stabili sull'utente e aggiorna la memoria, senza doppioni.
+let learnedUntil = store.get("learnedUntil", 0);
+let learnTimer = 0, learning = false;
+
+function scheduleLearning(delay = 20000) {
+  clearTimeout(learnTimer);
+  learnTimer = setTimeout(learnFromConversation, delay);
+}
+
+async function learnFromConversation() {
+  const fresh = chat.filter((m) => m.ts > learnedUntil && !m.error);
+  if (learning || !fresh.some((m) => m.role === "user") || !currentKey()) return;
+  learning = true;
+  const until = fresh[fresh.length - 1].ts;
+  const n = settings.name;
+  const known = memory.length ? memory.map((m) => `[${m.id}] ${m.text}`).join("\n") : "(niente)";
+  const dialog = fresh.map((m) => `${m.role === "user" ? n : "Jarvis"}: ${m.text}`).join("\n");
+  const system = `Sei il modulo di memoria di Jarvis, l'assistente personale di ${n}. Leggi un estratto di conversazione e aggiorna ciò che Jarvis sa di ${n}.
+Tieni solo informazioni stabili e utili in futuro: persone della sua vita e relazioni, lavoro e progetti, abitudini, gusti, salute se la cita, luoghi, obiettivi, date importanti.
+Ignora richieste momentanee, domande generiche, battute e ciò che dice Jarvis su sé stesso.
+Ogni informazione: una frase breve in terza persona, in italiano (es. "Lavora in Omura come consulente").
+Non duplicare ciò che è già noto; se un'informazione nuova corregge o precisa una vecchia, aggiornala.
+Rispondi SOLO con JSON valido, senza testo attorno: {"aggiungi": ["..."], "aggiorna": [{"id": "...", "testo": "..."}], "rimuovi": ["id"]}. Liste vuote se non c'è niente.`;
+  try {
+    const { impl } = PROVIDERS[settings.provider];
+    const { text } = await impl.chat({
+      key: currentKey(), model: currentModel(), system,
+      history: [{ role: "user", text: `Già noto:\n${known}\n\nConversazione:\n${dialog}` }],
+      onText: () => {},
+    });
+    const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
+    let changes = 0;
+    for (const f of json.aggiungi || []) if (addMemory(f)) changes++;
+    for (const u of json.aggiorna || []) {
+      const m = memory.find((x) => x.id === u.id);
+      if (m && u.testo && u.testo !== m.text) { m.text = String(u.testo).trim(); m.date = today(); changes++; }
+    }
+    for (const id of json.rimuovi || []) if (memory.some((x) => x.id === id)) { memory = memory.filter((x) => x.id !== id); changes++; }
+    store.set("memory", memory);
+    renderMemory();
+    learnedUntil = until;
+    store.set("learnedUntil", learnedUntil);
+    $("#memory-status").textContent = "Ultimo aggiornamento: " + new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    if (changes) toast(changes === 1 ? "Ho imparato una cosa nuova su di te." : `Ho imparato ${changes} cose nuove su di te.`);
+  } catch (err) {
+    console.warn("Apprendimento non riuscito, riprovo più tardi:", err);
+  } finally {
+    learning = false;
+  }
 }
 
 // ---------- Chat scritta (tutti i provider) ----------
@@ -436,7 +490,7 @@ function startConversation() {
     },
     onToolCall: runTool,
     onError: (msg) => toast(msg, 5000),
-    onClose: () => { session = null; setState("idle"); setLevel(0); },
+    onClose: () => { session = null; setState("idle"); setLevel(0); scheduleLearning(1500); },
   };
   const kind = engine();
   setState("connecting");
@@ -726,6 +780,7 @@ function showCore() {
     pickLiveModel(currentKey()).then((m) => { if (m) { settings.liveModel = m; saveSettings(); } });
   }
   handleLaunchParams();
+  scheduleLearning(4000);
 }
 
 function handleLaunchParams() {
@@ -759,7 +814,6 @@ function bindCore() {
 
   $("#note-date").value = today();
   $("#note-form").onsubmit = (e) => { e.preventDefault(); const t = $("#note-text").value.trim(); if (t) { addNote(t, $("#note-date").value); $("#note-text").value = ""; } };
-  $("#memory-form").onsubmit = (e) => { e.preventDefault(); if (addMemory($("#memory-text").value)) $("#memory-text").value = ""; };
   $("#clear-chat").onclick = () => { chat = []; store.set("chat", chat); renderHistory(); newTurn(); };
 
   $("#set-provider").onchange = onSettingsProvider;
