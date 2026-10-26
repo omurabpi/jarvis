@@ -5,7 +5,7 @@
 const SDK_URL = "https://cdn.jsdelivr.net/npm/@elevenlabs/client@1.31.0/+esm";
 
 // ID dell'agente creato via API sull'account ElevenLabs di Francesco.
-export const ELEVEN_AGENT_ID = "";
+export const ELEVEN_AGENT_ID = "agent_4601m5w93gzwe9t90bj4fjy94jk7";
 
 export const elevenAvailable = () => !!ELEVEN_AGENT_ID;
 

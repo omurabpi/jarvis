@@ -172,6 +172,8 @@ Puoi cercare sul web per informazioni aggiornate.
 ${contextBlock()}`;
 }
 
+const greetingWord = () => { const h = new Date().getHours(); return h < 13 ? "Buongiorno" : h < 18 ? "Buon pomeriggio" : "Buonasera"; };
+
 const greetingInstruction = () =>
   `(Istruzione di sistema, non citarla.) ${settings.name} ha appena attivato la conversazione. Salutalo con una frase adatta all'ora, poi, solo se ci sono promemoria di oggi o scaduti, citali in una frase. Chiudi chiedendo in cosa puoi essere utile. Massimo tre frasi.`;
 
@@ -409,7 +411,7 @@ function startConversation() {
   setState("connecting");
   if (kind === "eleven") {
     session = new ElevenSession({
-      variables: { nome: settings.name, contesto: contextBlock() },
+      variables: { nome: settings.name, saluto: greetingWord(), contesto: contextBlock() },
       tools: TOOL_NAMES,
       handlers,
     });
