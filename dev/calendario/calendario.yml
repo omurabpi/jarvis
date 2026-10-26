@@ -1,0 +1,24 @@
+# Ogni 30 minuti legge il tuo calendario e lo mette, cifrato, nel tuo archivio Jarvis.
+# Segreti da impostare nella TUA copia: CALENDAR_URL e JARVIS_TOKEN (vedi README).
+name: Calendario Jarvis
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  aggiorna:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Aggiorna il calendario
+        env:
+          CALENDAR_URL: ${{ secrets.CALENDAR_URL }}
+          JARVIS_TOKEN: ${{ secrets.JARVIS_TOKEN }}
+        run: python sync_calendario.py

@@ -249,6 +249,10 @@ function renderSettings(details, toast) {
 export function initSync({ toast } = {}) {
   watchWrites();
   setInterval(() => { if (getAccount() && document.visibilityState === "visible") syncNow().catch(() => {}); }, 15 * 60 * 1000);
+  // Richiesta di sincronizzazione da altri moduli (es. calendario appena collegato).
+  window.addEventListener("jarvis:sync", () => {
+    syncNow().then(({ changed }) => { if (changed || localStorage.getItem("jarvis.calendar")) toast?.("Calendario ricevuto."); }).catch(() => {});
+  });
 
   const header = document.querySelector("#sheet-settings > header");
   if (header && !document.querySelector("#sync-guide")) {

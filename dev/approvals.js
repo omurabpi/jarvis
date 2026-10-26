@@ -2,6 +2,7 @@
 // Si aggiunge da solo nelle impostazioni (non tocca index.html).
 
 import { readCalendar, calendarEnabled } from "./calendar.js";
+import { calendarSetupPanel } from "./calendar-setup.js";
 import { MIC_STEPS, micPlatform, micForgets } from "./mic.js";
 
 const get = (k, d = null) => { try { return JSON.parse(localStorage.getItem("jarvis." + k)) ?? d; } catch { return d; } };
@@ -70,7 +71,18 @@ async function items(toast) {
       toast?.("Calendario scollegato. Per fermare anche la lettura elimina la tua copia jarvis-calendario su GitHub.", 7000);
       setTimeout(() => location.reload(), 1500);
     } } : cal || localStorage.getItem("jarvis.calendarOff") ? { label: "Riattiva", run: () => { localStorage.removeItem("jarvis.calendarOff"); toast?.("Calendario riattivato: arriva alla prossima sincronizzazione."); setTimeout(() => location.reload(), 900); } }
-      : { label: "Collegalo", run: () => window.open("https://github.com/omurabpi/jarvis-calendario-modello#readme", "_blank", "noopener") },
+      : { label: "Collegalo", run: (row) => {
+        if (row.querySelector("[data-setup]")) return;
+        if (!get("github")?.token) { toast?.("Prima collega Jarvis a GitHub, qui sopra in Account e sincronizzazione."); return; }
+        const panel = calendarSetupPanel({
+          toast,
+          getJarvisToken: () => get("github")?.token,
+          // La prima lettura su GitHub impiega circa un minuto: poi sincronizzo per ricevere gli eventi.
+          onDone: () => [90, 180].forEach((s) => setTimeout(() => window.dispatchEvent(new Event("jarvis:sync")), s * 1000)),
+        });
+        panel.dataset.setup = "1";
+        row.querySelector("div").append(panel);
+      } },
   });
 
   const elevenOn = settings.engine !== "gemini" && settings.engine !== "browser";
@@ -128,7 +140,7 @@ async function render(box, toast) {
     </div>`);
     if (it.action) {
       const b = el(`<button type="button" style="background:none;border:0;padding:0;margin-top:6px;font-size:.82rem;cursor:pointer;color:${it.action.danger ? "var(--danger)" : "var(--accent)"}">${it.action.label}</button>`);
-      b.onclick = it.action.run;
+      b.onclick = () => it.action.run(row);
       row.querySelector("div").append(b);
     }
     box.append(row);
