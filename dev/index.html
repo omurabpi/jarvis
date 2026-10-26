@@ -26,15 +26,15 @@
     <div class="ob-step" data-step="name">
       <p class="eyebrow">Sistema online</p>
       <h1 class="type" data-text="Buongiorno. Sono Jarvis."></h1>
-      <p class="lead">Il suo assistente personale. Come preferisce che la chiami?</p>
-      <input id="ob-name" autocomplete="given-name" placeholder="Il suo nome" enterkeyhint="next">
+      <p class="lead">Il tuo assistente personale. Come ti chiami?</p>
+      <input id="ob-name" autocomplete="given-name" placeholder="Il tuo nome" enterkeyhint="next">
       <button class="primary wide" data-next="brain">Continua</button>
     </div>
 
     <div class="ob-step" data-step="brain" hidden>
       <p class="eyebrow">Passo 1 di 3</p>
       <h1>Per pensare mi serve un cervello.</h1>
-      <p class="lead">Scelga l'intelligenza artificiale. Le consiglio Gemini: è gratuita e mi permette di parlarle a voce in tempo reale.</p>
+      <p class="lead">Scegli l'intelligenza artificiale. Ti consiglio Gemini: è gratis e ci permette di parlare a voce in tempo reale.</p>
       <button class="card choice-card selected" data-brain="gemini">
         <span class="card-title">Gemini di Google <span class="pill">Consigliato</span></span>
         <span class="card-sub">Gratis · conversazione vocale in tempo reale · ricerca web</span>
@@ -60,7 +60,7 @@
     <div class="ob-step" data-step="voice" hidden>
       <p class="eyebrow">Passo 3 di 3</p>
       <h1>Ultima cosa: la mia voce.</h1>
-      <p class="lead">Per parlarmi mi serve il microfono. Ascolto solo quando tocca il reattore.</p>
+      <p class="lead">Per parlarmi mi serve il microfono. Ascolto solo quando tocchi il reattore. Promesso.</p>
       <label>Voce
         <select id="ob-voice"></select>
       </label>
@@ -85,7 +85,7 @@
         </svg>
         <div class="reactor-slot core-r"></div>
       </button>
-      <p id="status" class="status">Tocchi il reattore per parlare</p>
+      <p id="status" class="status">Tocca il reattore e parla</p>
 
       <div class="captions" aria-live="polite">
         <p id="cap-user" class="cap-user"></p>
@@ -95,7 +95,7 @@
     </main>
 
     <form id="composer" class="composer" hidden>
-      <textarea id="input" rows="1" placeholder="Scriva a Jarvis…" enterkeyhint="send"></textarea>
+      <textarea id="input" rows="1" placeholder="Scrivi a Jarvis…" enterkeyhint="send"></textarea>
       <button type="submit" class="send" aria-label="Invia"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
     </form>
 
@@ -122,13 +122,13 @@
       <input id="note-date" type="date" aria-label="Scadenza">
       <button type="submit" class="primary">Aggiungi</button>
     </form>
-    <p class="small muted">Oppure dica a Jarvis: "ricordami di…"</p>
+    <p class="small muted">Oppure di' a Jarvis: "ricordami di…"</p>
     <ul id="notes" class="list"></ul>
   </section>
 
   <section id="sheet-memory" class="sheet" hidden>
-    <header><h2>Cosa so di lei</h2><button class="icon-btn" data-close aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
-    <p class="small muted">Jarvis impara da solo dalle conversazioni. Può anche dirgli "ricorda che…" o "dimentica che…". Tutto resta su questo telefono.</p>
+    <header><h2>Cosa so di te</h2><button class="icon-btn" data-close aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <p class="small muted">Jarvis impara da solo dalle conversazioni. Puoi anche dirgli "ricorda che…" o "dimentica che…". Tutto resta su questo telefono.</p>
     <form id="memory-form" class="note-form one">
       <input id="memory-text" placeholder="Aggiungi qualcosa che Jarvis deve sapere…" required>
       <button type="submit" class="primary">Aggiungi</button>
@@ -139,7 +139,7 @@
   <section id="sheet-settings" class="sheet" hidden>
     <header><h2>Impostazioni</h2><button class="icon-btn" data-close aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
     <form id="settings-form" class="settings">
-      <label>Il suo nome <input id="set-name"></label>
+      <label>Il tuo nome <input id="set-name"></label>
       <label>Intelligenza artificiale <select id="set-provider"></select></label>
       <div id="set-howto" class="howto"></div>
       <label>Chiave API <input id="set-key" type="password" autocomplete="off" spellcheck="false" placeholder="Incolla la chiave"></label>
