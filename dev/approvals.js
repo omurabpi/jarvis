@@ -61,14 +61,16 @@ async function items(toast) {
 
   const calOn = !!cal && calendarEnabled();
   list.push({
-    id: "calendar", title: "Calendario Apple", active: calOn,
-    detail: calOn ? `"${esc(cal.name || "Calendario")}": ${cal.events?.length || 0} eventi nelle prossime tre settimane, letti dal link pubblico ogni 30 minuti.`
-      : cal ? "Disattivato: Jarvis non usa più i tuoi eventi." : "Non collegato.",
+    id: "calendar", title: "Calendario", active: calOn,
+    detail: calOn ? `"${esc(cal.name || "Calendario")}": ${cal.events?.length || 0} eventi nelle prossime tre settimane, aggiornati ogni 30 minuti dalla tua procedura su GitHub.`
+      : cal ? "Disattivato: Jarvis non usa più i tuoi eventi."
+      : "Non collegato. Google Calendar o Apple: si collega una volta dal tuo GitHub, circa 5 minuti.",
     action: calOn ? { label: "Revoca", danger: true, run: () => {
       localStorage.setItem("jarvis.calendarOff", "true"); localStorage.removeItem("jarvis.calendar");
-      toast?.("Calendario scollegato. Per chiudere anche il link: Calendario → Calendari → (i) → disattiva Calendario pubblico.", 7000);
+      toast?.("Calendario scollegato. Per fermare anche la lettura elimina la tua copia jarvis-calendario su GitHub.", 7000);
       setTimeout(() => location.reload(), 1500);
-    } } : cal || localStorage.getItem("jarvis.calendarOff") ? { label: "Riattiva", run: () => { localStorage.removeItem("jarvis.calendarOff"); toast?.("Calendario riattivato: arriva alla prossima sincronizzazione."); setTimeout(() => location.reload(), 900); } } : null,
+    } } : cal || localStorage.getItem("jarvis.calendarOff") ? { label: "Riattiva", run: () => { localStorage.removeItem("jarvis.calendarOff"); toast?.("Calendario riattivato: arriva alla prossima sincronizzazione."); setTimeout(() => location.reload(), 900); } }
+      : { label: "Collegalo", run: () => window.open("https://github.com/omurabpi/jarvis-calendario-modello#readme", "_blank", "noopener") },
   });
 
   const elevenOn = settings.engine !== "gemini" && settings.engine !== "browser";
