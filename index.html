@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>Jarvis</title>
+  <meta name="description" content="Jarvis, il tuo assistente personale.">
+  <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c0e14" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Jarvis">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Configurazione iniziale -->
+  <section id="setup" class="screen" hidden>
+    <div class="setup-card">
+      <img class="app-icon big" src="icons/icon-192.png" alt="">
+      <h1 class="serif">Ciao, sono Jarvis.</h1>
+      <p class="muted">Due minuti di configurazione e sono tutto tuo. La tua chiave resta solo su questo telefono.</p>
+
+      <form id="setup-form">
+        <label>Come ti chiami?
+          <input id="setup-name" autocomplete="given-name" placeholder="Il tuo nome" required>
+        </label>
+
+        <fieldset>
+          <legend>Quale intelligenza artificiale usi?</legend>
+          <label class="choice">
+            <input type="radio" name="provider" value="gemini" checked>
+            <span><strong>Gemini</strong> di Google<br><span class="muted small">Gratuito per un uso normale</span></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="provider" value="claude">
+            <span><strong>Claude</strong> di Anthropic<br><span class="muted small">A consumo, pochi euro al mese</span></span>
+          </label>
+        </fieldset>
+
+        <div class="howto" data-for="gemini">
+          <p><strong>Come ottenere la chiave Gemini (gratis):</strong></p>
+          <ol>
+            <li>Apri <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> e accedi con Google</li>
+            <li>Tocca <em>Create API key</em> e copiala</li>
+            <li>Incollala qui sotto</li>
+          </ol>
+        </div>
+        <div class="howto" data-for="claude" hidden>
+          <p><strong>Come ottenere la chiave Claude:</strong></p>
+          <ol>
+            <li>Apri <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> e crea un account</li>
+            <li>In <em>Billing</em> aggiungi qualche euro di credito</li>
+            <li>In <em>API keys</em> tocca <em>Create key</em>, copiala e incollala qui sotto</li>
+          </ol>
+          <p class="muted small">L'abbonamento Claude Pro/Max non vale qui: serve una chiave API.</p>
+        </div>
+
+        <label>Chiave API
+          <input id="setup-key" type="password" autocomplete="off" spellcheck="false" placeholder="Incolla la chiave" required>
+        </label>
+
+        <p id="setup-error" class="error" hidden></p>
+        <button id="setup-submit" type="submit" class="primary">Attiva Jarvis</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- App principale -->
+  <section id="main" class="screen" hidden>
+    <header class="topbar">
+      <div class="brand serif"><img class="app-icon" src="icons/icon-192.png" alt="">Jarvis</div>
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="chat" aria-selected="true">Chat</button>
+        <button role="tab" data-tab="notes" aria-selected="false">Promemoria <span id="notes-badge" class="badge" hidden></span></button>
+        <button role="tab" data-tab="settings" aria-selected="false" aria-label="Impostazioni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+      </nav>
+    </header>
+
+    <div id="install-banner" class="banner" hidden>
+      <span id="install-text"></span>
+      <button id="install-btn" class="ghost" hidden>Installa</button>
+      <button id="install-close" class="close" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+
+    <!-- Chat -->
+    <div id="tab-chat" class="tab">
+      <div id="messages" class="messages" aria-live="polite"></div>
+      <div class="quick">
+        <button data-quick="brief">Brief del giorno</button>
+        <button data-quick="news">Notizie</button>
+        <button data-quick="email">Scrivi una email</button>
+      </div>
+      <form id="composer" class="composer">
+        <button id="mic" type="button" class="icon" aria-label="Parla" hidden><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <textarea id="input" rows="1" placeholder="Chiedi a Jarvis…" enterkeyhint="send"></textarea>
+        <button id="send" type="submit" class="icon primary" aria-label="Invia"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+      </form>
+    </div>
+
+    <!-- Promemoria -->
+    <div id="tab-notes" class="tab" hidden>
+      <form id="note-form" class="note-form">
+        <input id="note-text" placeholder="Nuovo promemoria…" required>
+        <input id="note-date" type="date" aria-label="Scadenza">
+        <button type="submit" class="primary">Aggiungi</button>
+      </form>
+      <p class="muted small">Puoi anche dire a Jarvis "ricordami di…" in chat.</p>
+      <ul id="notes" class="notes"></ul>
+    </div>
+
+    <!-- Impostazioni -->
+    <div id="tab-settings" class="tab" hidden>
+      <form id="settings-form" class="settings">
+        <label>Il tuo nome <input id="set-name"></label>
+        <label>Intelligenza artificiale
+          <select id="set-provider">
+            <option value="gemini">Gemini (Google)</option>
+            <option value="claude">Claude (Anthropic)</option>
+          </select>
+        </label>
+        <label>Chiave API <input id="set-key" type="password" autocomplete="off" spellcheck="false"></label>
+        <label data-for="claude">Modello Claude
+          <select id="set-claude-model">
+            <option value="claude-opus-5-5">Opus 5.5 — il più capace</option>
+            <option value="claude-sonnet-5-5">Sonnet 5.5 — equilibrato, costa la metà</option>
+            <option value="claude-haiku-5-5">Haiku 5.5 — veloce ed economico</option>
+          </select>
+        </label>
+        <label class="choice"><input id="set-voice" type="checkbox"> <span>Leggi le risposte ad alta voce</span></label>
+        <p id="settings-msg" class="small" hidden></p>
+        <button type="submit" class="primary">Salva</button>
+      </form>
+      <div class="danger-zone">
+        <button id="clear-chat" class="ghost">Cancella la conversazione</button>
+        <button id="reset-all" class="ghost danger">Reset completo (cancella tutto)</button>
+      </div>
+      <p class="muted small">I dati restano solo su questo telefono. Jarvis non invia email né fa acquisti: prepara bozze che invii tu.</p>
+    </div>
+  </section>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
