@@ -177,7 +177,7 @@ button.icon { width: 44px; height: 44px; padding: 0; flex: none; display: grid; 
 /* Chat */
 .messages {
   flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
-  padding: calc(var(--top-h) + 16px) 16px calc(130px + env(safe-area-inset-bottom));
+  padding: calc(var(--top-h) + 16px) 16px calc(146px + env(safe-area-inset-bottom));
 }
 .msg { max-width: 86%; overflow-wrap: anywhere; animation: rise .35s ease-out; }
 .msg.static { animation: none; }
@@ -219,7 +219,7 @@ details.guide code { background: var(--soft); padding: 1px 5px; border-radius: 4
 }
 .quick { display: flex; gap: 8px; overflow-x: auto; padding: 0 14px 8px; scrollbar-width: none; }
 .quick button { flex: none; padding: 7px 13px; border-radius: 99px; background: transparent; border: 1px solid var(--line); font-size: .87rem; }
-.composer { display: flex; align-items: flex-end; gap: 6px; padding: 0 12px 12px; }
+.composer { display: flex; align-items: flex-end; gap: 6px; padding: 0 12px 8px; }
 .composer textarea { resize: none; max-height: 140px; border-radius: 22px; padding: 10px 16px; }
 #mic { background: transparent; color: var(--muted); }
 #mic.listening { background: var(--accent); color: var(--on-accent); }
@@ -240,5 +240,20 @@ details.guide code { background: var(--soft); padding: 1px 5px; border-radius: 4
 /* Impostazioni */
 .settings { display: grid; gap: 16px; }
 .danger-zone { display: grid; gap: 8px; margin-top: 12px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+/* ================= Firma ================= */
+/* il logo è una maschera: prende il colore del testo, in chiaro e in scuro */
+.credit { margin: 0; text-align: center; font-size: .68rem; line-height: 1; letter-spacing: .02em; color: var(--muted); opacity: .7; }
+.credit .omura {
+  display: inline-block; width: 3.42em; height: .74em; margin-left: .25em; background: currentColor;
+  -webkit-mask: url(brand/omura.png) center / contain no-repeat;
+  mask: url(brand/omura.png) center / contain no-repeat;
+}
+.setup-card .credit { margin-top: 36px; }
+.dock .credit { padding-bottom: 8px; }
+#tab-notes .credit, #tab-settings .credit { margin-top: auto; padding-top: 20px; }
+.boot .credit { position: absolute; left: 0; right: 0; bottom: calc(28px + env(safe-area-inset-bottom)); opacity: 0; }
+.boot.on .credit { animation: credit-in .6s .9s ease-out forwards; }
+@keyframes credit-in { to { opacity: .7; } }
 
 .dev-tag { font-size: .62rem; font-weight: 700; letter-spacing: .06em; padding: 1px 5px; border-radius: 4px; background: #f79009; color: #1a1300; vertical-align: middle; }

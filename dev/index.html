@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <title>Jarvis Dev</title>
   <meta name="description" content="Jarvis, il tuo assistente personale.">
+  <meta name="author" content="Omura Srl">
   <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0c0e14" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,7 +19,10 @@
 </head>
 <body>
   <!-- Accensione -->
-  <div id="boot" class="boot" hidden aria-hidden="true"><div class="reactor-slot xl"></div></div>
+  <div id="boot" class="boot" hidden aria-hidden="true">
+    <div class="reactor-slot xl"></div>
+    <p class="credit">developed by <span class="omura"></span></p>
+  </div>
 
   <!-- Configurazione iniziale -->
   <section id="setup" class="screen" hidden>
@@ -45,6 +49,7 @@
         <p id="setup-error" class="error" hidden></p>
         <button id="setup-submit" type="submit" class="primary">Attiva Jarvis</button>
       </form>
+      <p class="credit">developed by <span class="omura" role="img" aria-label="Omura"></span></p>
     </div>
   </section>
 
@@ -81,6 +86,7 @@
         <textarea id="input" rows="1" placeholder="Chiedi a Jarvis…" enterkeyhint="send"></textarea>
         <button id="send" type="submit" class="icon primary" aria-label="Invia"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
       </form>
+      <p class="credit">developed by <span class="omura" role="img" aria-label="Omura"></span></p>
       </div>
     </div>
 
@@ -93,6 +99,7 @@
       </form>
       <p class="muted small">Puoi anche dire a Jarvis "ricordami di…" in chat.</p>
       <ul id="notes" class="notes"></ul>
+      <p class="credit">developed by <span class="omura" role="img" aria-label="Omura"></span></p>
     </div>
 
     <!-- Impostazioni -->
@@ -131,6 +138,7 @@
         <button id="reset-all" class="ghost danger">Reset completo (cancella tutto)</button>
       </div>
       <p class="muted small">Chiavi e dati restano solo su questo telefono. Jarvis non invia email né fa acquisti: prepara bozze che invii tu.</p>
+      <p class="credit">developed by <span class="omura" role="img" aria-label="Omura"></span></p>
     </div>
   </section>
 
