@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>Jarvis Dev</title>
+  <meta name="description" content="Jarvis, il tuo assistente personale.">
+  <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c0e14" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Jarvis Dev">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Accensione -->
+  <div id="boot" class="boot" hidden aria-hidden="true"><div class="reactor-slot xl"></div></div>
+
+  <!-- Configurazione iniziale -->
+  <section id="setup" class="screen" hidden>
+    <div class="setup-card">
+      <div class="reactor-slot lg"></div>
+      <h1>Ciao, sono Jarvis.</h1>
+      <p class="muted">Scegli l'intelligenza artificiale che preferisci e incolla la tua chiave. Resta solo su questo telefono.</p>
+
+      <form id="setup-form">
+        <label>Come ti chiami?
+          <input id="setup-name" autocomplete="given-name" placeholder="Il tuo nome" required>
+        </label>
+
+        <label>Intelligenza artificiale
+          <select id="setup-provider"></select>
+        </label>
+
+        <div id="setup-howto" class="howto"></div>
+
+        <label>Chiave API
+          <input id="setup-key" type="password" autocomplete="off" spellcheck="false" placeholder="Incolla la chiave" required>
+        </label>
+
+        <p id="setup-error" class="error" hidden></p>
+        <button id="setup-submit" type="submit" class="primary">Attiva Jarvis</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- App principale -->
+  <section id="main" class="screen" hidden>
+    <header class="topbar glass">
+      <div class="topbar-row">
+      <div class="brand"><div class="reactor-slot sm"></div><div><div>Jarvis <span class="dev-tag">DEV</span></div><div id="model-chip" class="model-chip"></div></div></div>
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="chat" aria-selected="true">Chat</button>
+        <button role="tab" data-tab="notes" aria-selected="false">Promemoria <span id="notes-badge" class="badge" hidden></span></button>
+        <button role="tab" data-tab="settings" aria-selected="false" aria-label="Impostazioni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+      </nav>
+      </div>
+      <div id="install-banner" class="banner" hidden>
+        <span id="install-text"></span>
+        <button id="install-btn" class="ghost" hidden>Installa</button>
+        <button id="install-close" class="close" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+    </header>
+
+
+    <!-- Chat -->
+    <div id="tab-chat" class="tab">
+      <div id="messages" class="messages" aria-live="polite"></div>
+      <div class="dock glass">
+      <div class="quick">
+        <button data-quick="brief">Brief del giorno</button>
+        <button data-quick="news">Notizie</button>
+        <button data-quick="email">Scrivi una email</button>
+      </div>
+      <form id="composer" class="composer">
+        <button id="mic" type="button" class="icon" aria-label="Parla" hidden><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <textarea id="input" rows="1" placeholder="Chiedi a Jarvis…" enterkeyhint="send"></textarea>
+        <button id="send" type="submit" class="icon primary" aria-label="Invia"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+      </form>
+      </div>
+    </div>
+
+    <!-- Promemoria -->
+    <div id="tab-notes" class="tab" hidden>
+      <form id="note-form" class="note-form">
+        <input id="note-text" placeholder="Nuovo promemoria…" required>
+        <input id="note-date" type="date" aria-label="Scadenza">
+        <button type="submit" class="primary">Aggiungi</button>
+      </form>
+      <p class="muted small">Puoi anche dire a Jarvis "ricordami di…" in chat.</p>
+      <ul id="notes" class="notes"></ul>
+    </div>
+
+    <!-- Impostazioni -->
+    <div id="tab-settings" class="tab" hidden>
+      <form id="settings-form" class="settings">
+        <label>Il tuo nome <input id="set-name"></label>
+        <label>Intelligenza artificiale <select id="set-provider"></select></label>
+        <div id="set-howto" class="howto"></div>
+        <label>Chiave API <input id="set-key" type="password" autocomplete="off" spellcheck="false" placeholder="Incolla la chiave"></label>
+        <label>Modello
+          <select id="set-model" disabled><option>Salva la chiave per vedere i modelli</option></select>
+        </label>
+        <label class="choice"><input id="set-voice" type="checkbox"> <span>Leggi le risposte ad alta voce</span></label>
+        <label class="choice"><input id="set-motion" type="checkbox"> <span>Animazioni del reattore</span></label>
+        <p id="settings-msg" class="small" hidden></p>
+        <button type="submit" class="primary">Salva</button>
+      </form>
+      <details class="guide">
+        <summary>Widget, Siri e scorciatoie</summary>
+        <h4>iPhone: widget e "Ehi Siri"</h4>
+        <ol>
+          <li>Apri l'app <strong>Comandi</strong> e tocca <strong>+</strong></li>
+          <li>Aggiungi l'azione <strong>Apri URL</strong> con questo indirizzo:<br><code id="guide-url-talk"></code></li>
+          <li>Chiama il comando <strong>Jarvis</strong>: ora puoi dire "Ehi Siri, Jarvis"</li>
+          <li>Sulla schermata Home tieni premuto, tocca <strong>Modifica → Aggiungi widget → Comandi</strong> e scegli Jarvis</li>
+        </ol>
+        <p class="small muted">Altri comandi utili: <code id="guide-url-brief"></code> per il brief, <code id="guide-url-note"></code> per un promemoria. Su iPhone i comandi aprono Jarvis in Safari.</p>
+        <h4>Android</h4>
+        <ol>
+          <li>Tieni premuta l'icona di Jarvis: trovi <strong>Parla</strong>, <strong>Brief</strong> e <strong>Promemoria</strong>, che puoi trascinare sulla Home</li>
+          <li>Da qualsiasi app tocca <strong>Condividi → Jarvis</strong> per fargli riassumere o rispondere</li>
+        </ol>
+      </details>
+      <div class="danger-zone">
+        <button id="clear-chat" class="ghost">Cancella la conversazione</button>
+        <button id="reset-all" class="ghost danger">Reset completo (cancella tutto)</button>
+      </div>
+      <p class="muted small">Chiavi e dati restano solo su questo telefono. Jarvis non invia email né fa acquisti: prepara bozze che invii tu.</p>
+    </div>
+  </section>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
