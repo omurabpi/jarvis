@@ -139,7 +139,15 @@ function watchWrites() {
 
 // ---------- Interfaccia (aggiunta da qui per non toccare index.html) ----------
 function el(html) { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; }
-const ago = (ts) => !ts ? "mai" : new Date(ts).toLocaleString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+// "alle 17:39" oggi, "ieri alle 17:39", altrimenti "il 24 ott alle 17:39".
+const ago = (ts) => {
+  if (!ts) return "mai";
+  const d = new Date(ts), now = new Date();
+  const time = d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  if (d.toDateString() === now.toDateString()) return "alle " + time;
+  if (d.toDateString() === new Date(now - 86400000).toDateString()) return "ieri alle " + time;
+  return "il " + d.toLocaleDateString("it-IT", { day: "numeric", month: "short" }) + " alle " + time;
+};
 
 function loginForm({ toast, onConnected }) {
   const box = el(`<div style="display:grid;gap:10px">
@@ -179,10 +187,24 @@ function renderSettings(details, toast) {
     body.append(loginForm({ toast, onConnected: () => setTimeout(() => location.reload(), 900) }));
     return;
   }
-  const info = el(`<div style="display:grid;gap:10px">
-    <p class="small" style="margin:0">Collegato come <strong>@${acc.login}</strong>. Ultima sincronizzazione: <span data-last>${ago(acc.lastSync)}</span>.</p>
+  const ring = "width:40px;height:40px;padding:0;border-radius:50%;display:grid;place-items:center;flex:none;background:transparent;border:1px solid var(--line-strong);color:var(--text)";
+  const link = "background:none;border:0;padding:0;font-size:.82rem;cursor:pointer";
+  const info = el(`<div style="display:grid;gap:12px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <img src="${acc.avatar || ""}" alt="" width="40" height="40" style="width:40px;height:40px;border-radius:50%;flex:none;background:var(--line-strong);object-fit:cover">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@${acc.login}</div>
+        <div class="small muted" data-last>Sincronizzato ${ago(acc.lastSync)}</div>
+      </div>
+      <button type="button" data-sync aria-label="Sincronizza ora" title="Sincronizza ora" style="${ring}">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .6s"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/></svg>
+      </button>
+    </div>
     <p class="small error" data-warn hidden style="margin:0"></p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="primary" data-sync style="flex:1">Sincronizza ora</button><button type="button" class="ghost" data-change style="flex:1">Cambia token</button><button type="button" class="ghost danger" data-out style="flex:1">Scollega</button></div>
+    <div style="display:flex;gap:18px">
+      <button type="button" data-change class="muted" style="${link};color:var(--muted)">Cambia token</button>
+      <button type="button" data-out style="${link};color:var(--danger)">Scollega</button>
+    </div>
   </div>`);
   const form = loginForm({ toast, onConnected: () => setTimeout(() => location.reload(), 900) });
   form.hidden = true;
@@ -193,10 +215,17 @@ function renderSettings(details, toast) {
     form.querySelector("input").focus();
   };
   info.querySelector("[data-change]").onclick = () => showForm();
-  info.querySelector("[data-sync]").onclick = async () => {
+  const syncBtn = info.querySelector("[data-sync]"), icon = syncBtn.querySelector("svg");
+  let turns = 0;
+  syncBtn.onclick = async () => {
+    syncBtn.disabled = true;
+    const spin = setInterval(() => (icon.style.transform = `rotate(${++turns * 180}deg)`), 300);
+    icon.style.transform = `rotate(${++turns * 180}deg)`;
     try { const { changed } = await syncNow(); toast?.(changed ? "Dati aggiornati dall'altro dispositivo." : "Tutto sincronizzato."); if (changed) setTimeout(() => location.reload(), 800); }
     catch (err) { if (/token/i.test(err.message)) showForm(err.message); else toast?.(err.message); }
-    info.querySelector("[data-last]").textContent = ago(getAccount()?.lastSync);
+    clearInterval(spin);
+    syncBtn.disabled = false;
+    info.querySelector("[data-last]").textContent = "Sincronizzato " + ago(getAccount()?.lastSync);
   };
   info.querySelector("[data-out]").onclick = () => { disconnect(); renderSettings(details, toast); toast?.("Account scollegato: i dati restano su questo dispositivo."); };
   body.append(info);
