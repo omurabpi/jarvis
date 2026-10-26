@@ -363,3 +363,12 @@ details.guide code { background: rgba(255, 255, 255, .07); padding: 1px 5px; bor
   .ob-step { grid-column: 2; grid-row: 1; padding: 6vh 0; }
   .onboarding > .credit { grid-column: 1 / -1; grid-row: 2; }
 }
+
+/* ---------- In ascolto del proprio nome ---------- */
+body.wake-on[data-state=idle] .status::before {
+  content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%; vertical-align: 2px;
+  background: var(--accent); box-shadow: 0 0 8px rgb(var(--glow) / .8); animation: wake-dot 2.4s ease-in-out infinite;
+}
+@keyframes wake-dot { 50% { opacity: .3; } }
+.wake-row { display: grid; gap: 6px; }
+.wake-row p { margin: 0; }

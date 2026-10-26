@@ -5,6 +5,7 @@ import { LiveSession, VOICES, pickLiveModel } from "./voice.js";
 import { ElevenSession, elevenAvailable } from "./eleven.js";
 import { initTransfer } from "./transfer.js";
 import { initSync } from "./sync.js";
+import { WakeWord, wakeAvailable } from "./wake.js";
 
 const MAX_HISTORY = 30;
 const $ = (s) => document.querySelector(s);
@@ -81,7 +82,20 @@ const STATUS = {
 };
 function setState(state) {
   document.body.dataset.state = state === "connecting" ? "thinking" : state;
-  $("#status").textContent = STATUS[state] ?? "";
+  $("#status").textContent = (state === "idle" ? idleStatus() : STATUS[state]) ?? "";
+}
+
+// ---------- Parola d'attivazione ("Jarvis") ----------
+const wake = new WakeWord(() => {
+  if (!session && document.body.dataset.state === "idle") startConversation();
+  else syncWake();
+});
+wake.onDenied = () => { toast("Per sentirmi chiamare mi serve il microfono. Lo attivi nelle impostazioni del browser?", 6000); syncWake(); };
+function idleStatus() { return wake.on ? "Chiamami «Jarvis». O tocca il reattore, se sei timido" : STATUS.idle; }
+function syncWake() {
+  if (settings?.wake && wakeAvailable() && !session) wake.start(); else wake.stop();
+  document.body.classList.toggle("wake-on", wake.on);
+  if (document.body.dataset.state === "idle") $("#status").textContent = idleStatus();
 }
 function setLevel(v) { document.body.style.setProperty("--level", v.toFixed(3)); }
 
@@ -693,6 +707,8 @@ const ENGINE_LABEL = { eleven: "ElevenLabs (voce premium)", gemini: "Gemini Live
 
 function startConversation() {
   if (session) { session.stop(); return; }
+  wake.stop(); // il microfono serve alla conversazione
+  document.body.classList.remove("wake-on");
   newTurn();
   let jarvisFinal = "", userTurns = 0;
   const handlers = {
@@ -715,7 +731,7 @@ function startConversation() {
     },
     onToolCall: runTool,
     onError: (msg) => toast(msg, 5000),
-    onClose: () => { session = null; setState("idle"); setLevel(0); scheduleLearning(1500); },
+    onClose: () => { session = null; setState("idle"); setLevel(0); scheduleLearning(1500); syncWake(); },
   };
   const kind = engine();
   const op = takeOpener();
@@ -855,6 +871,9 @@ function fillSettings() {
   fillVoices($("#set-voice"), settings.voice);
   $("#set-speak").checked = !!settings.speak;
   $("#set-motion").checked = settings.motion !== false;
+  $("#wake-row").hidden = !wakeAvailable();
+  $("#set-wake").checked = !!settings.wake;
+  $("#set-wake").onchange = (e) => { settings.wake = e.target.checked; saveSettings(); syncWake(); };
   $("#voice-engine").textContent = "Motore vocale attivo: " + ENGINE_LABEL[engine()] + ".";
   $("#set-voice").closest("label").hidden = engine() !== "gemini";
   $("#settings-msg").hidden = true;
@@ -1034,6 +1053,9 @@ function showCore() {
   setState("idle");
   // Su PC (schermo largo e mouse) si scrive più che parlare: il campo è già aperto.
   if (matchMedia("(min-width: 800px) and (hover: hover) and (pointer: fine)").matches && $("#composer").hidden) $("#kb-toggle").click();
+  // "Jarvis!": l'ascolto parte subito; dove il browser vuole prima un tocco, parte al primo tocco.
+  syncWake();
+  document.addEventListener("pointerdown", () => { if (settings?.wake && !wake.on && !session) syncWake(); });
   const last = [...chat].reverse().find((m) => m.role === "assistant" && !m.error);
   if (last) capJarvis(last.text);
   else capJarvis(`Eccoti, ${settings.name}. Tocca il reattore quando vuoi parlare.`);
