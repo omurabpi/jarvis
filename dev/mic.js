@@ -36,6 +36,7 @@ export const MIC_STEPS = {
     "Vai su <strong>App → Safari</strong> (sugli iOS meno recenti direttamente <strong>Safari</strong>)",
     "Scorri fino a <em>Impostazioni dei siti web</em> e tocca <strong>Microfono</strong>",
     "Scegli <strong>Consenti</strong>",
+    "Nota: così vale per tutti i siti. Se preferisci solo Jarvis, aprilo in Safari e tocca <strong>aA → Impostazioni sito web → Microfono → Consenti</strong>",
   ],
   android: [
     "Quando compare la richiesta scegli <strong>Consenti durante la visita del sito</strong>, non «Solo questa volta»",
