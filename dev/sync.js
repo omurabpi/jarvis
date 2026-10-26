@@ -176,11 +176,11 @@ function renderSettings(details, toast) {
 export function initSync({ toast } = {}) {
   watchWrites();
 
-  const danger = document.querySelector("#sheet-settings .danger-zone");
-  if (danger && !document.querySelector("#sync-guide")) {
+  const header = document.querySelector("#sheet-settings > header");
+  if (header && !document.querySelector("#sync-guide")) {
     const details = el(`<details class="guide" id="sync-guide" open><summary>Account e sincronizzazione</summary><div data-body style="margin-top:10px"></div></details>`);
     renderSettings(details, toast);
-    danger.before(details);
+    header.after(details); // in cima alle impostazioni: è la prima cosa da fare su un nuovo dispositivo
     document.querySelector('[data-open="settings"]')?.addEventListener("click", () => renderSettings(details, toast));
   }
 
