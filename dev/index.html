@@ -28,6 +28,14 @@
       <h1 class="type" data-text="Buongiorno. Sono Jarvis."></h1>
       <p class="lead">Il tuo assistente personale. Come ti chiami?</p>
       <input id="ob-name" autocomplete="given-name" placeholder="Il tuo nome" enterkeyhint="next">
+      <div id="ob-gender" class="gender" hidden>
+        <p id="ob-gender-hint" class="small muted"></p>
+        <div class="chips" role="radiogroup" aria-label="Come ti parlo">
+          <button type="button" data-gender="m">Al maschile</button>
+          <button type="button" data-gender="f">Al femminile</button>
+          <button type="button" data-gender="n">Neutro</button>
+        </div>
+      </div>
       <button class="primary wide" data-next="brain">Continua</button>
     </div>
 
@@ -137,6 +145,13 @@
     <header><h2>Impostazioni</h2><button class="icon-btn" data-close aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
     <form id="settings-form" class="settings">
       <label>Il tuo nome <input id="set-name"></label>
+      <label>Come ti parla Jarvis
+        <select id="set-gender">
+          <option value="m">Al maschile</option>
+          <option value="f">Al femminile</option>
+          <option value="n">Neutro</option>
+        </select>
+      </label>
       <label>Intelligenza artificiale <select id="set-provider"></select></label>
       <div id="set-howto" class="howto"></div>
       <label>Chiave API <input id="set-key" type="password" autocomplete="off" spellcheck="false" placeholder="Incolla la chiave"></label>

@@ -221,3 +221,10 @@ details.guide code { background: rgba(255, 255, 255, .06); padding: 1px 5px; bor
 .onboarding > .credit { margin-top: auto; padding: 8px 0 14px; }
 .dock .credit { grid-column: 1 / -1; padding: 4px 0 2px; }
 .sheet > .credit { margin-top: auto; padding-top: 20px; }
+
+/* ---------- Scelta del genere ---------- */
+.gender { display: grid; gap: 8px; animation: rise .3s ease-out; }
+.gender p { margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips button { padding: 9px 15px; border-radius: 99px; background: transparent; border: 1px solid var(--line-strong); font-size: .9rem; color: var(--muted); }
+.chips button.on { border-color: var(--accent); color: var(--accent); background: rgba(124, 196, 242, .12); }
