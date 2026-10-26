@@ -3,6 +3,8 @@ import { PROVIDERS, ProviderError } from "./providers.js";
 import { ACTIONS_PROMPT, parseActions, actionButtons, buildAction, usePhoneBook, normalizePhone } from "./actions.js";
 import { LiveSession, VOICES, pickLiveModel } from "./voice.js";
 import { ElevenSession, elevenAvailable } from "./eleven.js";
+import { initTransfer } from "./transfer.js";
+import { initSync } from "./sync.js";
 
 const MAX_HISTORY = 30;
 const $ = (s) => document.querySelector(s);
@@ -1097,6 +1099,8 @@ function bindCore() {
 mountReactors();
 bindOnboarding();
 bindCore();
+initTransfer({ toast });
+initSync({ toast });
 if (settings?.keys && currentKey()) {
   saveSettings();
   showCore();
