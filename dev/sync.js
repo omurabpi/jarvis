@@ -5,6 +5,8 @@
 // La sincronizzazione unisce (non sostituisce): niente si perde passando da un dispositivo all'altro.
 
 import { readAll, merge } from "./transfer.js";
+import { calendarEnabled } from "./calendar.js";
+import { initApprovals } from "./approvals.js";
 
 const API = "https://api.github.com";
 const FILE = "jarvis.json";
@@ -58,7 +60,8 @@ async function open(text, account) {
 }
 
 // ---------- Collegamento e sincronizzazione ----------
-const syncable = () => { const d = readAll(); delete d.github; return d; };
+// Il calendario arriva da GitHub Actions in un file a parte: non va ricaricato insieme al resto.
+const syncable = () => { const d = readAll(); delete d.github; delete d.calendar; delete d.calendarOff; return d; };
 
 export async function connect(token) {
   token = token.trim();
@@ -95,6 +98,17 @@ export function syncNow() {
     const file = gist.files?.[FILE];
     let content = file?.content || "";
     if (file?.truncated && file.raw_url) content = await (await fetch(file.raw_url)).text();
+    const cal = gist.files?.["calendario.json"];
+    if (cal && calendarEnabled()) {
+      try {
+        let raw = cal.content || "";
+        if (cal.truncated && cal.raw_url) raw = await (await fetch(cal.raw_url)).text();
+        const data = await open(raw, account);
+        writing = true;
+        localStorage.setItem("jarvis.calendar", JSON.stringify(data));
+        writing = false;
+      } catch (err) { writing = false; console.warn("Calendario non leggibile:", err); }
+    }
     const local = syncable();
     let remote = {};
     if (content) {
@@ -234,6 +248,7 @@ function renderSettings(details, toast) {
 
 export function initSync({ toast } = {}) {
   watchWrites();
+  setInterval(() => { if (getAccount() && document.visibilityState === "visible") syncNow().catch(() => {}); }, 15 * 60 * 1000);
 
   const header = document.querySelector("#sheet-settings > header");
   if (header && !document.querySelector("#sync-guide")) {
@@ -242,6 +257,8 @@ export function initSync({ toast } = {}) {
     header.after(details); // in cima alle impostazioni: è la prima cosa da fare su un nuovo dispositivo
     document.querySelector('[data-open="settings"]')?.addEventListener("click", () => renderSettings(details, toast));
   }
+
+  initApprovals({ toast });
 
   const nameStep = document.querySelector('.ob-step[data-step="name"]');
   if (nameStep && !document.querySelector("#ob-github")) {

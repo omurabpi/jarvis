@@ -5,6 +5,7 @@ import { LiveSession, VOICES, pickLiveModel } from "./voice.js";
 import { ElevenSession, elevenAvailable } from "./eleven.js";
 import { initTransfer } from "./transfer.js";
 import { initSync } from "./sync.js";
+import { calendarBlock } from "./calendar.js";
 import { WakeWord, wakeAvailable } from "./wake.js";
 
 const MAX_HISTORY = 30;
@@ -338,7 +339,7 @@ function contextBlock() {
   const open = notes.filter((n) => !n.done);
   const rem = open.length ? open.map((n) => `- [${n.id}] ${n.date}${n.time ? " " + n.time : ""} — ${n.text}`).join("\n") : "(nessuno)";
   const book = contacts.length ? contacts.map((c) => c.name).join(", ") : "(vuota)";
-  return `Adesso è ${now}.\n\nCosa sai di ${settings.name}:\n${mem}\n\nPromemoria aperti:\n${rem}\n\nRubrica (solo i nomi: il numero lo inserisce l'app): ${book}`;
+  return `Adesso è ${now}.\n\nCosa sai di ${settings.name}:\n${mem}\n\nPromemoria aperti:\n${rem}\n\nRubrica (solo i nomi: il numero lo inserisce l'app): ${book}${calendarBlock()}`;
 }
 
 function textSystemPrompt() {
@@ -544,6 +545,7 @@ function scheduleLearning(delay = 20000) {
 }
 
 async function learnFromConversation() {
+  if (settings.learn === false) return; // disattivata dal pannello Autorizzazioni
   const fresh = chat.filter((m) => m.ts > learnedUntil && !m.error);
   if (learning || !fresh.some((m) => m.role === "user") || !currentKey()) return;
   learning = true;
