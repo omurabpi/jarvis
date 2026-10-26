@@ -293,7 +293,7 @@ details.guide code { background: rgba(255, 255, 255, .07); padding: 1px 5px; bor
 
 /* ---------- Su PC: schermo largo e mouse ---------- */
 /* reattore grande a sinistra, parole a destra, comandi in una capsula sospesa, pannelli di lato */
-@media (min-width: 960px) and (hover: hover) and (pointer: fine) {
+@media (min-width: 800px) and (hover: hover) and (pointer: fine) {
   body {
     background:
       radial-gradient(60% 85% at 27% 50%, rgba(60, 125, 205, .19) 0%, rgba(40, 80, 150, .06) 50%, transparent 75%),
