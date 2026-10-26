@@ -26,24 +26,58 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
+      # Senza la chiave definitiva nei segreti si compila una versione di prova
+      # firmata con la chiave di debug, pubblicata su un link separato.
       - name: Chiave di firma
-        run: echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+        id: key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Chiave definitiva assente: compilo la versione di prova."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Compila APK
+      - name: Compila APK definitivo
+        if: steps.key.outputs.signed == 'true'
         working-directory: android
         env:
           KEYSTORE_FILE: ${{ runner.temp }}/release.jks
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           VERSION_CODE: ${{ github.run_number }}
-        run: gradle assembleRelease --no-daemon
+        run: |
+          gradle assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk ../jarvis.apk
+
+      - name: Compila APK di prova
+        if: steps.key.outputs.signed != 'true'
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          gradle assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../jarvis-prova.apk
 
       - name: Pubblica sul link fisso
+        if: steps.key.outputs.signed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android/app/build/outputs/apk/release/app-release.apk jarvis.apk
           gh release delete apk --yes --cleanup-tag || true
           gh release create apk jarvis.apk --latest \
             --title "Jarvis per Android" \
             --notes "Versione 1.${{ github.run_number }}. Scarica jarvis.apk dal telefono e aprilo per installarlo o aggiornarlo."
+
+      - name: Pubblica la versione di prova
+        if: steps.key.outputs.signed != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk-prova --yes --cleanup-tag || true
+          gh release create apk-prova jarvis-prova.apk --prerelease \
+            --title "Jarvis per Android (prova)" \
+            --notes "Versione di prova 1.${{ github.run_number }}, firmata con chiave temporanea. Prima di installare la versione definitiva va disinstallata."
