@@ -288,3 +288,70 @@ details.guide code { background: rgba(255, 255, 255, .07); padding: 1px 5px; bor
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chips button { padding: 10px 16px; border-radius: 99px; font-size: .9rem; color: var(--muted); }
 .chips button.on { background: var(--light); color: var(--on-accent); }
+
+/* ---------- Su PC: schermo largo e mouse ---------- */
+/* reattore grande a sinistra, parole a destra, comandi in una capsula sospesa, pannelli di lato */
+@media (min-width: 960px) and (hover: hover) and (pointer: fine) {
+  body {
+    background:
+      radial-gradient(60% 85% at 27% 50%, rgba(60, 125, 205, .19) 0%, rgba(40, 80, 150, .06) 50%, transparent 75%),
+      linear-gradient(180deg, var(--bg-top) 0%, var(--bg) 55%, #040405 100%) fixed;
+  }
+
+  .topbar { padding: 26px 32px 0 44px; }
+  .brand b { font-size: 1.15rem; }
+  .brand small { font-size: .88rem; }
+
+  .stage {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: 1fr auto 1fr;
+    column-gap: 5vw; align-items: center; padding: 0 7vw;
+  }
+  .reactor-btn { grid-column: 1; grid-row: 2; justify-self: center; width: min(30vw, 52vh, 440px); }
+  .reactor-btn:hover::before { background: radial-gradient(closest-side, rgb(var(--glow) / calc(.2 + var(--level) * .3)), rgb(var(--glow) / 0)); }
+  .status { grid-column: 1; grid-row: 3; align-self: start; margin-top: 30px; font-size: .92rem; }
+  .captions {
+    grid-column: 2; grid-row: 1 / 4; align-self: center; flex: none; max-width: 640px; max-height: 66vh; margin: 0; padding: 32px 0;
+    -webkit-mask-image: linear-gradient(transparent, #000 32px, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(transparent, #000 32px, #000 calc(100% - 32px), transparent);
+  }
+  .cap-user { font-size: 1.2rem; }
+  .cap-jarvis { font-size: clamp(2rem, 2.7vw, 3rem); line-height: 1.14; letter-spacing: -.025em; }
+  .app-actions { gap: 10px; }
+
+  /* in basso un'unica riga: campo di scrittura sempre aperto e, accanto, le tre icone */
+  .core { display: grid; grid-template-columns: 1fr minmax(0, 600px) auto 1fr; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .topbar, .stage { grid-column: 1 / -1; }
+  .stage { min-height: 0; }
+  .composer, .dock {
+    grid-row: 3; align-self: end; margin-bottom: 46px; padding: 10px; border-radius: 36px;
+    background: linear-gradient(180deg, rgba(36, 38, 45, .78) 0%, rgba(18, 19, 23, .86) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 20px 60px rgba(0, 0, 0, .5);
+  }
+  .composer { grid-column: 2; align-items: center; animation: none; transition: box-shadow .2s; }
+  .composer:focus-within { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 0 0 1px rgb(var(--glow) / .45), 0 20px 60px rgba(0, 0, 0, .5); }
+  .composer textarea, .composer textarea:focus { background: transparent; border: 0; box-shadow: none; padding: 13px 14px; }
+  .dock { grid-column: 3; margin-left: 12px; flex-wrap: nowrap; }
+  .dock #kb-toggle { display: none; }
+  .dock .credit { position: fixed; left: 0; right: 0; bottom: 18px; }
+
+  /* pannelli di lato: il reattore resta in vista */
+  .sheet {
+    left: auto; width: min(500px, 92vw); padding: 30px 32px 26px 36px;
+    border-left: 1px solid var(--line);
+    box-shadow: -40px 0 90px rgba(0, 0, 0, .55), 0 0 0 100vmax rgba(0, 0, 0, .35);
+    animation: drawer-in .38s cubic-bezier(.2, .8, .2, 1);
+  }
+  @keyframes drawer-in { from { opacity: 0; transform: translateX(48px); } }
+
+  .toast { bottom: 140px; }
+
+  /* primo avvio: reattore a sinistra, domande a destra */
+  .onboarding {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px) minmax(0, .4fr); grid-template-rows: 1fr auto;
+    column-gap: 6vw; align-items: center; padding: 0 6vw;
+  }
+  .ob-reactor { grid-column: 1; grid-row: 1; justify-self: end; margin: 0; }
+  .reactor-slot.ob { width: min(28vw, 50vh, 380px); }
+  .ob-step { grid-column: 2; grid-row: 1; padding: 6vh 0; }
+  .onboarding > .credit { grid-column: 1 / -1; grid-row: 2; }
+}

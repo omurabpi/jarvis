@@ -970,6 +970,8 @@ function showCore() {
   renderNotes();
   renderMemory();
   setState("idle");
+  // Su PC (schermo largo e mouse) si scrive più che parlare: il campo è già aperto.
+  if (matchMedia("(min-width: 960px) and (hover: hover) and (pointer: fine)").matches && $("#composer").hidden) $("#kb-toggle").click();
   const last = [...chat].reverse().find((m) => m.role === "assistant" && !m.error);
   if (last) capJarvis(last.text);
   else capJarvis(`Eccoti, ${settings.name}. Tocca il reattore quando vuoi parlare.`);
