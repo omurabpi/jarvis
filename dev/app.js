@@ -320,7 +320,7 @@ Rispondi solo con la frase.`;
     const used = openers.used.length ? openers.used.map((u) => "- " + u).join("\n") : "(nessuna)";
     const { impl } = PROVIDERS[settings.provider];
     const { text } = await impl.chat({
-      key: currentKey(), model: currentModel(), system, onText: () => {},
+      key: currentKey(), model: currentModel(), system, onText: () => {}, web: false,
       history: [{ role: "user", text: `${contextBlock()}\n\n${recentDialog()}\n\nAperture già usate:\n${used}` }],
     });
     const line = String(text).replace(/\[\[[\s\S]*?\]\]/g, "").split("\n").map((l) => l.trim()).find(Boolean)?.replace(/^["“«]|["”»]$/g, "").trim();
@@ -352,7 +352,7 @@ function textSystemPrompt() {
 
 Stai scrivendo su uno smartphone: risposte brevi, elenchi solo se aiutano, niente tabelle. ${web}
 
-${contextBlock()}
+Il contesto aggiornato (ora, cosa sai di ${settings.name}, promemoria, rubrica) arriva in testa al suo ultimo messaggio, tra <contesto> e </contesto>: lo aggiunge l'app, non l'ha scritto lui.
 
 Comandi da aggiungere in fondo alla risposta, una riga ciascuno, senza citarli nel testo:
 [[PROMEMORIA: AAAA-MM-GG HH:MM | testo]] quando ${settings.name} chiede di ricordargli qualcosa (ora facoltativa)
@@ -565,7 +565,7 @@ Rispondi SOLO con JSON valido, senza testo attorno: {"aggiungi": ["..."], "aggio
   try {
     const { impl } = PROVIDERS[settings.provider];
     const { text } = await impl.chat({
-      key: currentKey(), model: currentModel(), system,
+      key: currentKey(), model: currentModel(), system, web: false,
       history: [{ role: "user", text: `Già noto:\n${known}\n\nConversazione:\n${dialog}` }],
       onText: () => {},
     });
@@ -603,9 +603,16 @@ async function askText(text, onText = () => {}) {
     settings.models = { ...settings.models, [settings.provider]: fallback };
     saveSettings();
   }
-  let history = chat.filter((m) => !m.error).slice(-MAX_HISTORY);
+  // Tutto ciò che si ripete a ogni messaggio resta identico, così il provider lo rilegge dalla cache a prezzo ridotto:
+  // l'inizio della cronologia avanza a scatti di 10 (mai meno di MAX_HISTORY messaggi) e il contesto che cambia
+  // (ora, memoria, promemoria) va in fondo, nell'ultimo messaggio, invece che nelle istruzioni.
+  const all = chat.filter((m) => !m.error);
+  const start = Math.max(0, all.length - MAX_HISTORY);
+  let history = all.slice(start - (start % 10));
   while (history.length && history[0].role !== "user") history.shift();
-  return impl.chat({ key: currentKey(), model: currentModel(), system: textSystemPrompt(), history, onText });
+  const last = history[history.length - 1];
+  if (last?.role === "user") history[history.length - 1] = { ...last, text: `<contesto>\n${contextBlock()}\n</contesto>\n\n${last.text}` };
+  return impl.chat({ key: currentKey(), model: currentModel(), system: textSystemPrompt(), history, onText, cache: true });
 }
 
 async function sendText(text) {

@@ -48,7 +48,8 @@ const claude = {
     } catch (err) { throw claudeError(err); }
   },
   pickDefault: (models) => firstMatch(models, /^claude-opus-5-5$/, /^claude-opus/, /^claude-sonnet/),
-  async chat({ key, model, system, history, onText }) {
+  // web: false per i compiti interni che non cercano mai. cache: true per la chat, dove la conversazione si ripete a ogni messaggio.
+  async chat({ key, model, system, history, onText, web = true, cache = false }) {
     const client = await anthropic(key);
     const isHaiku = model.startsWith("claude-haiku");
     const supportsFallback = /^claude-(opus-5|sonnet-5-5|fable)/.test(model);
@@ -57,7 +58,9 @@ const claude = {
       max_tokens: 16000,
       system,
       output_config: { effort: "medium" },
-      tools: [{ type: isHaiku ? "web_search_20250305" : "web_search_20260209", name: "web_search", max_uses: 5 }],
+      ...(web ? { tools: [{ type: isHaiku ? "web_search_20250305" : "web_search_20260209", name: "web_search", max_uses: 5 }] } : {}),
+      // La parte già vista della conversazione si rilegge dalla cache, a un decimo del prezzo.
+      ...(cache ? { cache_control: { type: "ephemeral" } } : {}),
     };
     if (supportsFallback) {
       // Se un filtro di sicurezza rifiuta, il server riprova da solo con un modello di riserva.
@@ -106,11 +109,12 @@ const gemini = {
       .map((m) => ({ id: m.name.replace(/^models\//, ""), label: m.displayName || m.name }));
   },
   pickDefault: (models) => firstMatch(models, /^gemini-\d+(\.\d+)?-flash$/, /^gemini-flash-latest$/, /flash/),
-  async chat({ key, model, system, history, onText }) {
+  // Gemini mette in cache da solo le parti iniziali uguali tra una richiesta e l'altra.
+  async chat({ key, model, system, history, onText, web = true }) {
     const body = {
       systemInstruction: { parts: [{ text: system }] },
       contents: history.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.text }] })),
-      tools: [{ google_search: {} }],
+      ...(web ? { tools: [{ google_search: {} }] } : {}),
     };
     const res = await fetch(`${GEMINI_BASE}/models/${model}:streamGenerateContent?alt=sse`, {
       method: "POST",
