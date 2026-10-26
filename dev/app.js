@@ -7,6 +7,7 @@ import { initTransfer } from "./transfer.js";
 import { initSync } from "./sync.js";
 import { calendarBlock } from "./calendar.js";
 import { WakeWord, wakeAvailable } from "./wake.js";
+import { rememberMic, micForgets } from "./mic.js";
 
 const MAX_HISTORY = 30;
 const $ = (s) => document.querySelector(s);
@@ -88,6 +89,7 @@ function setState(state) {
 
 // ---------- Parola d'attivazione ("Jarvis") ----------
 const wake = new WakeWord(() => {
+  rememberMic();
   if (!session && document.body.dataset.state === "idle") startConversation();
   else syncWake();
 });
@@ -751,7 +753,7 @@ function startConversation() {
   }
   const s = session;
   s.start()
-    .then(() => { if (kind === "gemini") s.sendText(greetingInstruction(op)); })
+    .then(() => { rememberMic(); if (kind === "gemini") s.sendText(greetingInstruction(op)); })
     .catch((err) => {
       console.error(err);
       if (err?.name === "NotAllowedError") toast("Mi serve il microfono: attivalo nelle impostazioni del browser.", 6000);
@@ -1058,6 +1060,13 @@ function showCore() {
   // "Jarvis!": l'ascolto parte subito; dove il browser vuole prima un tocco, parte al primo tocco.
   syncWake();
   document.addEventListener("pointerdown", () => { if (settings?.wake && !wake.on && !session) syncWake(); });
+  // Se il browser dimentica il permesso del microfono a ogni avvio, lo dico (al massimo una volta al giorno).
+  micForgets().then((forgets) => {
+    const day = new Date().toDateString();
+    if (!forgets || store.get("micHint") === day) return;
+    store.set("micHint", day);
+    toast("Il browser continua a dimenticare il permesso del microfono. In Impostazioni → Autorizzazioni ti dico come farlo smettere.", 7000);
+  });
   const last = [...chat].reverse().find((m) => m.role === "assistant" && !m.error);
   if (last) capJarvis(last.text);
   else capJarvis(`Eccoti, ${settings.name}. Tocca il reattore quando vuoi parlare.`);

@@ -372,3 +372,4 @@ body.wake-on[data-state=idle] .status::before {
 @keyframes wake-dot { 50% { opacity: .3; } }
 .wake-row { display: grid; gap: 6px; }
 .wake-row p { margin: 0; }
+#approvals-guide [data-list] button { box-shadow: none; }

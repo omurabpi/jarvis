@@ -2,6 +2,7 @@
 // Si aggiunge da solo nelle impostazioni (non tocca index.html).
 
 import { readCalendar, calendarEnabled } from "./calendar.js";
+import { MIC_STEPS, micPlatform, micForgets } from "./mic.js";
 
 const get = (k, d = null) => { try { return JSON.parse(localStorage.getItem("jarvis." + k)) ?? d; } catch { return d; } };
 const set = (k, v) => localStorage.setItem("jarvis." + k, JSON.stringify(v));
@@ -29,16 +30,27 @@ function updateSettings(patch, toast, msg) {
   setTimeout(() => location.reload(), 900);
 }
 
+// I passaggi per rendere permanente il permesso, su questo dispositivo, aperti sotto la voce.
+function toggleMicSteps(btn) {
+  const box = btn.parentElement, open = box.querySelector(".mic-steps");
+  if (open) { open.remove(); return; }
+  box.append(el(`<ol class="mic-steps small muted" style="margin:8px 0 0;padding-left:18px;display:grid;gap:4px">${MIC_STEPS[micPlatform()].map((s) => `<li>${s}</li>`).join("")}</ol>`));
+}
+
 async function items(toast) {
   const settings = get("settings", {}), github = get("github"), cal = readCalendar(), mic = await micState();
   const contacts = get("contacts", []);
   const list = [];
 
+  const forgets = await micForgets();
   list.push({
     id: "microphone", title: "Microfono", active: mic === "granted",
     detail: mic === "granted" ? "Jarvis ascolta solo quando tocchi il reattore o pronunci la parola d'attivazione."
-      : mic === "denied" ? "Bloccato: Jarvis non può sentirti." : "Te lo chiederà alla prima conversazione a voce.",
-    action: mic === "granted" || mic === "denied" ? { label: "Come cambiarlo", run: () => toast?.("Si cambia dal browser: su iPhone Impostazioni → Safari → Microfono, su PC il lucchetto accanto all'indirizzo.") } : null,
+      : mic === "denied" ? "Bloccato: Jarvis non può sentirti."
+      : forgets ? "Il browser lo dimentica e te lo richiede a ogni avvio. Memoria da pesce rosso: si cura in un minuto."
+      : "Te lo chiederà alla prima conversazione a voce.",
+    action: mic === "unknown" ? null
+      : { label: mic === "granted" ? "Come cambiarlo" : mic === "denied" ? "Come sbloccarlo" : "Non chiedermelo più", run: (e) => toggleMicSteps(e.currentTarget) },
   });
 
   list.push({
