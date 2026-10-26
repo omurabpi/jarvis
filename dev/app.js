@@ -402,7 +402,9 @@ async function runTool({ name, args }) {
     case "azione": {
       const a = buildAction(args.tipo, args);
       if (!a) return "Dati insufficienti per il pulsante.";
-      pending.push(a);
+      // Un messaggio riscritto sostituisce il pulsante precedente dello stesso tipo invece di aggiungerne un altro.
+      a.type = String(args.tipo).toUpperCase();
+      pending = [...pending.filter((p) => p.type !== a.type), a];
       renderCaptionActions();
       return "Pulsante mostrato all'utente.";
     }
@@ -656,7 +658,12 @@ function startConversation() {
     },
     onJarvisText: (text, final) => {
       capJarvis(text);
-      if (final) { jarvisFinal = text; pushChat({ role: "assistant", text, actions: [...pending], voice: true }); }
+      if (final) {
+        jarvisFinal = text;
+        // In cronologia ogni pulsante resta solo sul messaggio in cui è comparso.
+        pushChat({ role: "assistant", text, actions: pending.filter((a) => !a.saved), voice: true });
+        pending.forEach((a) => (a.saved = true));
+      }
     },
     onToolCall: runTool,
     onError: (msg) => toast(msg, 5000),
