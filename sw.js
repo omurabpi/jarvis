@@ -1,7 +1,7 @@
 // Service worker: rende l'app installabile e veloce da aprire.
 // Le chiamate alle AI (domini esterni) non vengono mai messe in cache.
-const CACHE = "jarvis-v2";
-const SHELL = ["./", "index.html", "style.css", "app.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon-48.png"];
+const CACHE = "jarvis-v3";
+const SHELL = ["./", "index.html", "style.css", "app.js", "providers.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon-48.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
