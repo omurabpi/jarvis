@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <title>Jarvis Dev</title>
   <meta name="description" content="Jarvis, il tuo assistente personale.">
-  <meta name="theme-color" content="#05070b">
+  <meta name="theme-color" content="#0c0f15">
   <meta name="color-scheme" content="dark">
   <meta name="author" content="Omura Srl">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -80,17 +80,13 @@
 
   <!-- ============ Schermata principale ============ -->
   <section id="core" class="screen core" hidden>
-    <header class="hud">
-      <div class="hud-time"><span id="clock">--:--</span><span id="date"></span></div>
-      <div class="hud-title">J.A.R.V.I.S. <span class="dev-tag">DEV</span></div>
+    <header class="topbar">
+      <div class="brand"><b>Jarvis <span class="dev-tag">DEV</span></b><small><span id="date"></span> · <span id="clock">--:--</span></small></div>
       <button class="icon-btn" data-open="settings" aria-label="Impostazioni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
     </header>
 
     <main class="stage">
       <button id="reactor-btn" class="reactor-btn" aria-label="Parla con Jarvis">
-        <svg class="hud-rings" viewBox="-100 -100 200 200" aria-hidden="true">
-          <circle class="hr1" r="96"/><circle class="hr2" r="90"/><circle class="hr3" r="99"/>
-        </svg>
         <div class="reactor-slot core-r"></div>
       </button>
       <p id="status" class="status">Tocca il reattore e parla</p>

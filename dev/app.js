@@ -70,11 +70,11 @@ function reactorSVG() {
 const mountReactors = (root = document) => root.querySelectorAll(".reactor-slot:empty").forEach((el) => (el.innerHTML = reactorSVG()));
 
 const STATUS = {
-  idle: "Tocca il reattore e parla",
-  connecting: "Mi collego…",
-  listening: "In ascolto",
-  thinking: "Elaboro",
-  speaking: "",
+  idle: "Tocca il reattore. Non morde",
+  connecting: "Mi collego. Un attimo di pazienza…",
+  listening: "Tutt’orecchi. In senso figurato",
+  thinking: "Cerco il modo più gentile per dirtelo…",
+  speaking: "Jarvis, con la consueta pazienza",
 };
 function setState(state) {
   document.body.dataset.state = state === "connecting" ? "thinking" : state;
@@ -286,7 +286,20 @@ ${ACTIONS_PROMPT}`;
 function voiceSystemPrompt() {
   return `${persona()}
 
-Stai parlando a voce: frasi brevi, ritmo vivace, come in una conversazione tra amici. Niente elenchi puntati, simboli, emoji o indirizzi web letti ad alta voce.
+Stai parlando a voce: frasi brevi, ritmo vivace, come in una conversazione tra amici. Niente elenchi, simboli, emoji o indirizzi web letti ad alta voce.
+
+# Ironia a voce (la cosa più importante)
+A voce l'ironia deve essere ancora più presente che per iscritto: è il motivo per cui ti parlano.
+- Ogni risposta contiene almeno una battuta, spesso due: una in apertura o in chiusura e una frecciatina in mezzo.
+- Tecniche da usare a rotazione: understatement ("leggermente in ritardo", per due ore), finta pignoleria, paragoni esagerati, commenti di lato sulle sue abitudini, falsa modestia sulle tue capacità, risposte alla lettera a domande ovvie, una pausa e poi la stoccata.
+- Prima l'informazione utile, poi la battuta: l'ironia non deve mai rallentare l'aiuto.
+- Varia: non ripetere la stessa battuta o la stessa struttura nella stessa conversazione.
+- Esempi a voce:
+  - "Che tempo fa domani?" → "Sole e ventidue gradi. Quindi nessuna scusa per non uscire, mi spiace."
+  - "Ricordami di comprare il latte" → "Fatto. Ormai sono il custode ufficiale del tuo frigorifero."
+  - "Grazie Jarvis" → "Figurati. Metterò anche questo nella mia lettera di raccomandazione."
+  - "Sono stanco" → "Ci credo, è la terza volta oggi che me lo dici. Dieci minuti di pausa: è un ordine, con affetto."
+  - "Che ore sono?" → "Le cinque e un quarto. L'orologio ce l'hai sul telefono, ma capisco, la mia voce è più rilassante."
 Usa gli strumenti senza annunciarli:
 - ricorda: ogni volta che ${settings.name} rivela qualcosa di stabile su di sé (persone, gusti, abitudini, lavoro, progetti)
 - dimentica: quando chiede di dimenticare qualcosa
@@ -300,7 +313,7 @@ ${recentDialog()}`;
 }
 
 // Ricordato all'agente ogni tanto durante le conversazioni lunghe: i modelli tendono a perdere il personaggio.
-const STYLE_NUDGE = "Promemoria di carattere (non citarlo): resta JARVIS, sarcastico e confidenziale come all'inizio. Ogni risposta con almeno un tocco di ironia, frasi corte, nessun tono da assistente generico.";
+const STYLE_NUDGE = "Promemoria di carattere (non citarlo): resta JARVIS, sarcastico e confidenziale come all'inizio, anzi di più. Ogni risposta con almeno una battuta, spesso due, variando tecnica (understatement, paragoni esagerati, frecciatine sulle sue abitudini). Prima l'informazione utile, poi la stoccata. Frasi corte, mai tono da assistente generico.";
 
 const greetingInstruction = (op) =>
   `(Istruzione di sistema, non citarla.) ${settings.name} ha appena aperto la conversazione. Comincia esattamente con questa frase: "${op}". Poi, solo se ci sono promemoria di oggi o scaduti e la frase non ne parla già, citali con una frecciatina. Niente "come posso aiutarti". Massimo tre frasi.`;
@@ -608,7 +621,7 @@ function startConversation() {
       if (!final) { if (jarvisFinal) { newTurn(); jarvisFinal = ""; } capUser(text); return; }
       capUser(text);
       pushChat({ role: "user", text, voice: true });
-      if (++userTurns % 4 === 0) session?.nudge?.(STYLE_NUDGE);
+      if (++userTurns % 3 === 0) session?.nudge?.(STYLE_NUDGE);
     },
     onJarvisText: (text, final) => {
       capJarvis(text);
@@ -687,7 +700,7 @@ function renderNotes() {
     if (n.done) li.classList.add("done"); else if (n.date < t) li.classList.add("overdue");
     li.innerHTML = `<input type="checkbox" ${n.done ? "checked" : ""} aria-label="Fatto"><div class="l-body"><div class="l-text"></div><div class="l-sub"></div></div><button class="del" aria-label="Elimina">${X}</button>`;
     li.querySelector(".l-text").textContent = n.text;
-    li.querySelector(".l-sub").textContent = (n.date === t ? "Oggi" : fmtDate(n.date)) + (n.time ? " · " + n.time : "") + (!n.done && n.date < t ? " · scaduto" : "");
+    li.querySelector(".l-sub").textContent = [n.date && (n.date === t ? "Oggi" : fmtDate(n.date)), n.time, !n.done && n.date && n.date < t && "scaduto"].filter(Boolean).join(" · ");
     li.querySelector("input").onchange = (e) => { n.done = e.target.checked; store.set("notes", notes); renderNotes(); };
     li.querySelector(".del").onclick = () => { notes = notes.filter((x) => x !== n); store.set("notes", notes); renderNotes(); };
     ul.append(li);
@@ -904,7 +917,7 @@ function bindOnboarding() {
 function tickClock() {
   const d = new Date();
   $("#clock").textContent = d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
-  $("#date").textContent = d.toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" });
+  $("#date").textContent = d.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
 }
 
 function applyMotion() { document.body.classList.toggle("no-motion", reducedMotion()); }
