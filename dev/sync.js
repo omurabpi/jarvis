@@ -1,7 +1,7 @@
 // Account e sincronizzazione con GitHub.
 // Ogni utente accede con il proprio GitHub (token con il solo permesso "gist"): i suoi dati Jarvis
 // vengono salvati in un gist segreto del suo account, cifrati con AES-GCM. La chiave di cifratura
-// deriva dal token, quindi chi vede solo il gist non può leggerlo.
+// deriva dall'identità GitHub dell'utente (stabile), così il token si può cambiare senza perdere i dati.
 // La sincronizzazione unisce (non sostituisce): niente si perde passando da un dispositivo all'altro.
 
 import { readAll, merge } from "./transfer.js";
@@ -33,23 +33,27 @@ const enc = new TextEncoder();
 const b64 = (bytes) => { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(s); };
 const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
-async function cryptoKey(token, login) {
-  const base = await crypto.subtle.importKey("raw", enc.encode(token), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: enc.encode("jarvis-sync-v1|" + login), iterations: 150000, hash: "SHA-256" },
+async function deriveKey(secret, salt) {
+  const base = await crypto.subtle.importKey("raw", enc.encode(secret), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt: enc.encode(salt), iterations: 150000, hash: "SHA-256" },
     base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
 }
+// v2: legata all'id numerico dell'account GitHub, che non cambia mai (nemmeno cambiando token o nome utente).
+const keyV2 = (account) => deriveKey("jarvis-sync-v2|" + account.userId, "jarvis-sync-v2|" + account.userId);
+// v1 (prime versioni): legata al token; si usa solo per leggere dati vecchi.
+const keyV1 = (account) => deriveKey(account.token, "jarvis-sync-v1|" + account.login);
 
 async function seal(data, account) {
   const gz = await new Response(new Blob([JSON.stringify(data)]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer();
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await cryptoKey(account.token, account.login), gz);
-  return JSON.stringify({ v: 1, iv: b64(iv), data: b64(new Uint8Array(ct)), updated: new Date().toISOString() });
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await keyV2(account), gz);
+  return JSON.stringify({ v: 2, iv: b64(iv), data: b64(new Uint8Array(ct)), updated: new Date().toISOString() });
 }
 
 async function open(text, account) {
   const box = JSON.parse(text);
-  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(box.iv) }, await cryptoKey(account.token, account.login), unb64(box.data));
+  const key = box.v === 1 ? await keyV1(account) : await keyV2(account);
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(box.iv) }, key, unb64(box.data));
   return JSON.parse(await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream("gzip"))).text());
 }
 
@@ -65,7 +69,9 @@ export async function connect(token) {
     gistId = list.find((g) => g.description === DESCRIPTION && g.files?.[FILE])?.id || null;
     if (list.length < 100) break;
   }
-  const account = { token, login: user.login, avatar: user.avatar_url, gistId, lastSync: 0 };
+  const previous = getAccount();
+  if (!gistId && previous?.userId === user.id) gistId = previous.gistId;
+  const account = { token, login: user.login, userId: user.id, avatar: user.avatar_url, gistId, lastSync: 0 };
   if (!gistId) {
     const created = await gh(token, "/gists", { method: "POST", body: JSON.stringify({ description: DESCRIPTION, public: false, files: { [FILE]: { content: await seal(syncable(), account) } } }) });
     account.gistId = created.id;
@@ -77,19 +83,30 @@ export async function connect(token) {
 export function disconnect() { setAccount(null); }
 
 let syncing = null;
+let lastError = "";
 // Scarica, unisce con i dati locali, salva in locale e ricarica online. Ritorna se sono arrivati dati nuovi.
 export function syncNow() {
   if (syncing) return syncing;
   syncing = (async () => {
-    const account = getAccount();
+    let account = getAccount();
     if (!account?.gistId) return { changed: false };
+    if (!account.userId) { account = { ...account, userId: (await gh(account.token, "/user")).id }; setAccount(account); }
     const gist = await gh(account.token, `/gists/${account.gistId}`);
     const file = gist.files?.[FILE];
     let content = file?.content || "";
     if (file?.truncated && file.raw_url) content = await (await fetch(file.raw_url)).text();
     const local = syncable();
     let remote = {};
-    if (content) { try { remote = await open(content, account); } catch { throw new Error("Non riesco a decifrare i dati online: il token è di un altro account?"); } }
+    if (content) {
+      try { remote = await open(content, account); }
+      catch {
+        // Succede con i dati cifrati dal vecchio token (ora cancellato). Se questo dispositivo ha i dati,
+        // li ricarica online con la cifratura nuova; se è vuoto si ferma, per non cancellare niente.
+        const hasData = (local.chat?.length || 0) + (local.memory?.length || 0) + (local.notes?.length || 0) > 0;
+        if (!hasData) throw new Error("I dati online sono cifrati con un vecchio token e qui non c'è niente da cui ripartire: collega prima il dispositivo che ha le chat.");
+        console.warn("Dati online illeggibili: li sostituisco con quelli di questo dispositivo.");
+      }
+    }
     const merged = merge(local, remote);
     const changed = JSON.stringify(merged) !== JSON.stringify(local);
     writing = true;
@@ -97,8 +114,10 @@ export function syncNow() {
     writing = false;
     await gh(account.token, `/gists/${account.gistId}`, { method: "PATCH", body: JSON.stringify({ files: { [FILE]: { content: await seal(merged, account) } } }) });
     setAccount({ ...getAccount(), lastSync: Date.now() });
+    lastError = "";
     return { changed };
-  })().finally(() => { syncing = null; });
+  })().catch((err) => { if (/token/i.test(err.message)) lastError = err.message; throw err; })
+    .finally(() => { syncing = null; });
   return syncing;
 }
 
@@ -162,15 +181,26 @@ function renderSettings(details, toast) {
   }
   const info = el(`<div style="display:grid;gap:10px">
     <p class="small" style="margin:0">Collegato come <strong>@${acc.login}</strong>. Ultima sincronizzazione: <span data-last>${ago(acc.lastSync)}</span>.</p>
-    <div style="display:flex;gap:8px"><button type="button" class="primary" data-sync style="flex:1">Sincronizza ora</button><button type="button" class="ghost danger" data-out style="flex:1">Scollega</button></div>
+    <p class="small error" data-warn hidden style="margin:0"></p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="primary" data-sync style="flex:1">Sincronizza ora</button><button type="button" class="ghost" data-change style="flex:1">Cambia token</button><button type="button" class="ghost danger" data-out style="flex:1">Scollega</button></div>
   </div>`);
+  const form = loginForm({ toast, onConnected: () => setTimeout(() => location.reload(), 900) });
+  form.hidden = true;
+  info.append(form);
+  const showForm = (warning) => {
+    form.hidden = false;
+    if (warning) { const w = info.querySelector("[data-warn]"); w.hidden = false; w.textContent = warning; }
+    form.querySelector("input").focus();
+  };
+  info.querySelector("[data-change]").onclick = () => showForm();
   info.querySelector("[data-sync]").onclick = async () => {
     try { const { changed } = await syncNow(); toast?.(changed ? "Dati aggiornati dall'altro dispositivo." : "Tutto sincronizzato."); if (changed) setTimeout(() => location.reload(), 800); }
-    catch (err) { toast?.(err.message); }
+    catch (err) { if (/token/i.test(err.message)) showForm(err.message); else toast?.(err.message); }
     info.querySelector("[data-last]").textContent = ago(getAccount()?.lastSync);
   };
   info.querySelector("[data-out]").onclick = () => { disconnect(); renderSettings(details, toast); toast?.("Account scollegato: i dati restano su questo dispositivo."); };
   body.append(info);
+  if (lastError) showForm(lastError);
 }
 
 export function initSync({ toast } = {}) {
