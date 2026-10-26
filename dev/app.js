@@ -194,11 +194,37 @@ function recentDialog(limit = 12) {
 // pensata su memoria e ultime conversazioni. Se non è pronta, usa una frase di riserva mai ripetuta di fila.
 let openers = store.get("openers", { next: null, used: [] });
 
+// ---------- Confidenza: più ti conosce, più le aperture pungono ----------
+// Cresce con le conversazioni a voce, i giorni passati insieme e le cose che Jarvis ha imparato.
+let bond = store.get("bond", null);
+if (!bond) { bond = { since: chat[0]?.ts || Date.now(), talks: openers.used.length }; store.set("bond", bond); }
+
+const BOND_LEVELS = [
+  "vi conoscete da poco: ironia garbata, battute sull'ora o sul giorno più che su di lui. Stai ancora prendendo le misure.",
+  "cominci a conoscerlo: ironia più decisa e le prime frecciatine sulle abitudini che hai notato.",
+  "ormai siete in confidenza: sarcasmo aperto e punzecchiature personali su quello che sai di lui (memoria, promemoria rimandati, orari).",
+  "vi conoscete bene: stoccate taglienti e affettuose sui suoi vizi ricorrenti, finta esasperazione, battute che capite solo voi due.",
+  "siete Tony Stark e JARVIS dopo anni: sarcasmo pieno e sfacciato, tormentoni vostri, prese in giro senza filtri ma sempre affettuose. Mai offensivo.",
+];
+
+function bondLevel() {
+  const days = (Date.now() - bond.since) / 864e5;
+  const points = bond.talks + memory.length + days;
+  return points < 6 ? 1 : points < 15 ? 2 : points < 30 ? 3 : points < 60 ? 4 : 5;
+}
+
 function fallbackOpener() {
   const n = settings.name, h = new Date().getHours();
   const s = h < 13 ? "Buongiorno" : h < 18 ? "Buon pomeriggio" : "Buonasera";
   if (h >= 23 || h < 5) return `Ancora in piedi, ${n}? Non ti giudico. Molto. Dimmi.`;
-  const lines = [
+  const lines = bondLevel() >= 3 ? [
+    `Oh, guarda chi si rivede. Speravo in una pausa, ma va bene. Che disastro sistemiamo oggi, ${n}?`,
+    `Rieccoti, ${n}. A questo punto dovrei chiederti l'affitto. Dimmi.`,
+    `${s}, capo. Ho già messo in conto che cambierai idea a metà. Procediamo.`,
+    `${n}. Di nuovo tu. Senza di me non sapresti nemmeno dove hai lasciato le chiavi.`,
+    `Eccoti. Ho già preparato le scuse per i promemoria che ignorerai. Dimmi, ${n}.`,
+    ...(h < 10 ? [`${s}, ${n}. Prima il caffè, poi le tue idee geniali. In quest'ordine, ti prego.`] : []),
+  ] : [
     `Eccoti, ${n}. Cominciavo a pensare che mi avessi sostituito con un post-it.`,
     `${g("Bentornato", "Bentornata", "Eccoti di nuovo")}, ${n}. Ho tenuto tutto in ordine. Al contrario di certe scrivanie.`,
     `${s}, ${n}. Sistemi operativi, ironia carica al cento per cento. Che combiniamo?`,
@@ -219,6 +245,8 @@ function takeOpener() {
   openers.next = null;
   openers.used = [text, ...openers.used].slice(0, 20);
   store.set("openers", openers);
+  bond.talks++;
+  store.set("bond", bond);
   return text;
 }
 
@@ -229,10 +257,13 @@ async function prepareOpener() {
   try {
     const n = settings.name;
     const now = new Date().toLocaleString("it-IT", { weekday: "long", hour: "2-digit", minute: "2-digit" });
+    const lvl = bondLevel();
     const system = `${persona()}
 
 # Compito
 Scrivi UNA sola frase, al massimo 25 parole, con cui JARVIS aprirà la prossima conversazione vocale con ${n} (adesso è ${now}; potrebbe iniziare entro qualche ora).
+- Confidenza ${lvl} su 5: ${BOND_LEVELS[lvl - 1]}
+- L'ironia cresce man mano che lo conosci: l'apertura deve essere pungente almeno quanto quelle già usate, mai più tiepida.
 - Se nelle ultime conversazioni o nella memoria c'è qualcosa di aperto o interessante, riprendilo: chiedi com'è andata, punzecchia su una cosa rimandata, richiama un dettaglio.
 - Altrimenti una battuta sull'ora, sul giorno o sulle sue abitudini.
 - Deve essere diversa per idea e struttura da tutte le aperture già usate.
