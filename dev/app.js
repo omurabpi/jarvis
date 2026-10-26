@@ -488,7 +488,13 @@ function markdown(src) {
 
 // ---------- Sottotitoli ----------
 function capUser(text) { $("#cap-user").textContent = text; }
-function capJarvis(text) { $("#cap-jarvis").innerHTML = markdown(text); const c = $(".captions"); c.scrollTop = c.scrollHeight; }
+function capJarvis(text) {
+  const el = $("#cap-jarvis");
+  el.innerHTML = markdown(text);
+  // Su PC il carattere segue la lunghezza: battute brevi grandi, risposte lunghe leggibili.
+  el.dataset.len = text.length < 90 ? "short" : text.length < 240 ? "medium" : "long";
+  const c = $(".captions"); c.scrollTop = c.scrollHeight;
+}
 function renderCaptionActions() {
   const box = $("#cap-actions");
   box.innerHTML = "";

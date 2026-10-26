@@ -317,7 +317,10 @@ details.guide code { background: rgba(255, 255, 255, .07); padding: 1px 5px; bor
     mask-image: linear-gradient(transparent, #000 32px, #000 calc(100% - 32px), transparent);
   }
   .cap-user { font-size: 1.2rem; }
-  .cap-jarvis { font-size: clamp(2rem, 2.7vw, 3rem); line-height: 1.14; letter-spacing: -.025em; }
+  .captions { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .14) transparent; }
+  .cap-jarvis { font-size: clamp(1.5rem, 1.75vw, 2.1rem); line-height: 1.24; letter-spacing: -.02em; }
+  .cap-jarvis[data-len=short] { font-size: clamp(1.9rem, 2.5vw, 2.9rem); line-height: 1.14; letter-spacing: -.025em; }
+  .cap-jarvis[data-len=long] { font-size: clamp(1.2rem, 1.3vw, 1.55rem); line-height: 1.38; letter-spacing: -.01em; font-weight: 500; }
   .app-actions { gap: 10px; }
 
   /* in basso un'unica riga: campo di scrittura sempre aperto e, accanto, le tre icone */
