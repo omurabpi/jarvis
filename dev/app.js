@@ -1099,6 +1099,18 @@ function bindCore() {
   input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !matchMedia("(pointer: coarse)").matches) { e.preventDefault(); $("#composer").requestSubmit(); } });
   $("#composer").onsubmit = (e) => { e.preventDefault(); const t = input.value; input.value = ""; autosize(); sendText(t); };
 
+  // iPhone, app installata: chiusa la tastiera, iOS a volte lascia la pagina più corta dello schermo
+  // (fascia nera in fondo) finché non si riapre l'app. Nascondere e rimostrare la schermata lo costringe a ricalcolare.
+  let tallest = innerHeight;
+  const healViewport = () => {
+    if (!navigator.standalone || innerWidth > innerHeight || tallest - innerHeight <= 4) return;
+    const el = $(".screen:not([hidden])");
+    if (el) { el.style.display = "none"; void el.offsetHeight; el.style.display = ""; }
+  };
+  addEventListener("resize", () => { if (innerWidth < innerHeight) tallest = Math.max(tallest, innerHeight); });
+  document.addEventListener("focusout", () => setTimeout(healViewport, 150));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) healViewport(); });
+
   $("#note-date").value = today();
   $("#note-form").onsubmit = (e) => { e.preventDefault(); const t = $("#note-text").value.trim(); if (t) { addNote(t, $("#note-date").value); $("#note-text").value = ""; } };
   $("#contact-form").onsubmit = (e) => {
