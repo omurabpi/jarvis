@@ -27,7 +27,8 @@ export class ElevenSession {
     }
     this.conv = await VoiceConversation.startSession({
       agentId: ELEVEN_AGENT_ID,
-      connectionType: "webrtc",
+      // Websocket: dal 28/10 con WebRTC il telefono si collega ma l'agente non entra mai (nessun saluto).
+      connectionType: "websocket",
       dynamicVariables: this.variables,
       clientTools,
       onConnect: () => this.h.onState("listening"),
